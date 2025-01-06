@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
-import shell from 'shelljs';
 import { X, Minus, Maximize2, Terminal as TerminalIcon, Trash2 } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
 
@@ -26,35 +25,40 @@ const Terminal = () => {
     scrollToBottom();
   }, [history]);
 
-  const executeCommand = async (cmd: string) => {
-    if (!cmd.trim()) return;
+  const simulateCommand = (cmd: string): string => {
+    // Simulate common npm and system commands
+    if (cmd === 'npm -v') {
+      return '10.2.4';
+    } else if (cmd === 'node -v') {
+      return 'v20.11.0';
+    } else if (cmd === 'npm run dev') {
+      return `
+VITE v5.4.6  ready in 241 ms
 
-    let output = '';
-    
-    if (cmd === 'help') {
-      output = `Available commands:
+➜  Local:   http://localhost:5173/
+➜  Network: http://192.168.1.100:5173/
+➜  press h + enter to show help`;
+    } else if (cmd === 'help') {
+      return `Available commands:
 - help: Show this help message
 - clear: Clear terminal
-- npm <command>: Run npm commands
-- node <file>: Run node files
+- npm -v: Show npm version
+- node -v: Show node version
+- npm run dev: Start development server
 `;
-    } else if (cmd === 'clear') {
+    }
+    return `Command not found: ${cmd}`;
+  };
+
+  const executeCommand = (cmd: string) => {
+    if (!cmd.trim()) return;
+
+    if (cmd === 'clear') {
       setHistory([]);
       return;
-    } else {
-      try {
-        const result = shell.exec(cmd, { silent: true });
-        output = result.stdout || result.stderr;
-      } catch (error) {
-        output = `Error: ${error}`;
-        toast({
-          variant: "destructive",
-          title: "Command failed",
-          description: String(error),
-        });
-      }
     }
 
+    const output = simulateCommand(cmd);
     setHistory(prev => [...prev, { command: cmd, output }]);
     setCommand('');
   };
