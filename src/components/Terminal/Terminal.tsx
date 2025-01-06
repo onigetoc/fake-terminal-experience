@@ -11,6 +11,7 @@ interface TerminalOutput {
 const Terminal = () => {
   const [isOpen, setIsOpen] = useState(true);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [command, setCommand] = useState('');
   const [history, setHistory] = useState<TerminalOutput[]>([]);
   const terminalRef = useRef<HTMLDivElement>(null);
@@ -81,8 +82,14 @@ VITE v5.4.6  ready in 241 ms
     );
   }
 
+  const terminalClasses = `fixed bg-[#1e1e1e] text-[#d4d4d4] border-t border-[#333] shadow-lg transition-all duration-200 ${
+    isFullscreen 
+      ? 'top-0 left-0 right-0 bottom-0 z-50' 
+      : 'bottom-0 left-0 right-0'
+  }`;
+
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-[#1e1e1e] text-[#d4d4d4] border-t border-[#333] shadow-lg">
+    <div className={terminalClasses}>
       {/* Terminal Header */}
       <div className="flex items-center justify-between px-4 py-2 bg-[#252526] border-b border-[#333]">
         <div className="flex items-center">
@@ -110,6 +117,7 @@ VITE v5.4.6  ready in 241 ms
             variant="ghost"
             size="icon"
             className="h-6 w-6"
+            onClick={() => setIsFullscreen(!isFullscreen)}
           >
             <Maximize2 className="h-4 w-4" />
           </Button>
@@ -129,7 +137,7 @@ VITE v5.4.6  ready in 241 ms
         <>
           <div 
             ref={terminalRef}
-            className="h-[300px] overflow-y-auto p-4 font-mono text-sm"
+            className={`overflow-y-auto p-4 font-mono text-sm ${isFullscreen ? 'h-[calc(100vh-40px)]' : 'h-[300px]'}`}
           >
             {history.map((entry, index) => (
               <div key={index} className="mb-2">
