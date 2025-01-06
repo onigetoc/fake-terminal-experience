@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
-import { X, Minus, Maximize2, Terminal as TerminalIcon, Trash2 } from 'lucide-react';
+import { X, Minus, Maximize2, Terminal as TerminalIcon, Trash2, Plus } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
 
 interface TerminalOutput {
@@ -10,6 +10,7 @@ interface TerminalOutput {
 
 const Terminal = () => {
   const [isOpen, setIsOpen] = useState(true);
+  const [isMinimized, setIsMinimized] = useState(false);
   const [command, setCommand] = useState('');
   const [history, setHistory] = useState<TerminalOutput[]>([]);
   const terminalRef = useRef<HTMLDivElement>(null);
@@ -101,9 +102,9 @@ VITE v5.4.6  ready in 241 ms
             variant="ghost"
             size="icon"
             className="h-6 w-6"
-            onClick={() => setIsOpen(false)}
+            onClick={() => setIsMinimized(!isMinimized)}
           >
-            <Minus className="h-4 w-4" />
+            {isMinimized ? <Plus className="h-4 w-4" /> : <Minus className="h-4 w-4" />}
           </Button>
           <Button
             variant="ghost"
@@ -123,51 +124,55 @@ VITE v5.4.6  ready in 241 ms
         </div>
       </div>
 
-      {/* Terminal Content */}
-      <div 
-        ref={terminalRef}
-        className="h-[300px] overflow-y-auto p-4 font-mono text-sm"
-      >
-        {history.map((entry, index) => (
-          <div key={index} className="mb-2">
-            <div className="flex">
-              <span className="text-[#608b4e] mr-2">&gt;</span>
-              <span>{entry.command}</span>
-            </div>
-            <div className="ml-4 whitespace-pre-wrap">{entry.output}</div>
+      {/* Terminal Content - Only show if not minimized */}
+      {!isMinimized && (
+        <>
+          <div 
+            ref={terminalRef}
+            className="h-[300px] overflow-y-auto p-4 font-mono text-sm"
+          >
+            {history.map((entry, index) => (
+              <div key={index} className="mb-2">
+                <div className="flex">
+                  <span className="text-[#608b4e] mr-2">&gt;</span>
+                  <span>{entry.command}</span>
+                </div>
+                <div className="ml-4 whitespace-pre-wrap">{entry.output}</div>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
 
-      {/* Command Input */}
-      <form onSubmit={handleSubmit} className="p-2 border-t border-[#333] flex">
-        <span className="text-[#608b4e] mr-2 mt-2">&gt;</span>
-        <input
-          type="text"
-          value={command}
-          onChange={(e) => setCommand(e.target.value)}
-          className="flex-1 bg-transparent border-none outline-none text-[#d4d4d4] font-mono"
-          placeholder="Type a command..."
-        />
-        <div className="flex space-x-2">
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={() => executeCommand('help')}
-          >
-            Help
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={() => executeCommand('clear')}
-          >
-            Clear
-          </Button>
-        </div>
-      </form>
+          {/* Command Input */}
+          <form onSubmit={handleSubmit} className="p-2 border-t border-[#333] flex">
+            <span className="text-[#608b4e] mr-2 mt-2">&gt;</span>
+            <input
+              type="text"
+              value={command}
+              onChange={(e) => setCommand(e.target.value)}
+              className="flex-1 bg-transparent border-none outline-none text-[#d4d4d4] font-mono"
+              placeholder="Type a command..."
+            />
+            <div className="flex space-x-2">
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => executeCommand('help')}
+              >
+                Help
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => executeCommand('clear')}
+              >
+                Clear
+              </Button>
+            </div>
+          </form>
+        </>
+      )}
     </div>
   );
 };
