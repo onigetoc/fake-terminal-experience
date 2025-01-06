@@ -96,6 +96,7 @@ VITE v5.4.6  ready in 241 ms
 
     if (cmd === 'clear') {
       setHistory([]);
+      setCommand('');  // Clear the input field for the 'clear' command
       return;
     }
 
