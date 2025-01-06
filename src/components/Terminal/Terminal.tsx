@@ -14,7 +14,11 @@ const Terminal = () => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [command, setCommand] = useState('');
   const [history, setHistory] = useState<TerminalOutput[]>([]);
+  const [height, setHeight] = useState(300); // Default height
+  const [isDragging, setIsDragging] = useState(false);
   const terminalRef = useRef<HTMLDivElement>(null);
+  const dragStartY = useRef<number>(0);
+  const dragStartHeight = useRef<number>(0);
   const { toast } = useToast();
 
   const scrollToBottom = () => {
@@ -26,6 +30,41 @@ const Terminal = () => {
   useEffect(() => {
     scrollToBottom();
   }, [history]);
+
+  // Handle mouse events for resizing
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    setIsDragging(true);
+    dragStartY.current = e.clientY;
+    dragStartHeight.current = height;
+    document.body.style.cursor = 'ns-resize';
+    document.body.style.userSelect = 'none';
+  };
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (isDragging && !isFullscreen) {
+        const deltaY = dragStartY.current - e.clientY;
+        const newHeight = Math.max(100, Math.min(window.innerHeight - 40, dragStartHeight.current + deltaY));
+        setHeight(newHeight);
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+
+    if (isDragging) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging, isFullscreen]);
 
   const simulateCommand = (cmd: string): string => {
     // Simulate common npm and system commands
@@ -90,6 +129,12 @@ VITE v5.4.6  ready in 241 ms
 
   return (
     <div className={terminalClasses}>
+      {/* Drag Handle */}
+      <div
+        className="absolute top-0 left-0 right-0 h-1 cursor-ns-resize"
+        onMouseDown={handleMouseDown}
+      />
+
       {/* Terminal Header */}
       <div className="flex items-center justify-between px-4 py-2 bg-[#252526] border-b border-[#333]">
         <div className="flex items-center">
@@ -137,7 +182,12 @@ VITE v5.4.6  ready in 241 ms
         <>
           <div 
             ref={terminalRef}
-            className={`overflow-y-auto p-4 font-mono text-sm ${isFullscreen ? 'h-[calc(100vh-40px)]' : 'h-[300px]'}`}
+            className={`overflow-y-auto p-4 font-mono text-sm ${
+              isFullscreen 
+                ? 'h-[calc(100vh-40px)]' 
+                : `h-[${height}px]`
+            }`}
+            style={{ height: isFullscreen ? 'calc(100vh - 40px)' : height }}
           >
             {history.map((entry, index) => (
               <div key={index} className="mb-2">
