@@ -34,23 +34,16 @@ const formatTextWithLinks = (text: string) => {
 };
 
 const formatCommand = (command: string) => {
-  // Liste des mots-clés à mettre en évidence
-  const keywords = ['npm', 'node', 'bun', 'yarn', 'pnpm', 'clear', 'help'];
+  const words = command.split(' ');
+  const firstWord = words[0];
+  const restOfCommand = words.slice(1).join(' ');
   
-  return command.split(' ').map((word, index) => {
-    if (keywords.includes(word.toLowerCase())) {
-      return (
-        <span key={index} className="terminal-command-keyword">
-          {word}
-        </span>
-      );
-    }
-    return (
-      <span key={index} className="terminal-command">
-        {word}
-      </span>
-    );
-  }).reduce((prev, curr) => [prev, ' ', curr]);
+  return (
+    <>
+      <span className="terminal-command-keyword">{firstWord}</span>
+      {restOfCommand && <span className="terminal-command"> {restOfCommand}</span>}
+    </>
+  );
 };
 
 const Terminal = () => {
