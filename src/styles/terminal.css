@@ -1,0 +1,57 @@
+.terminal-link {
+  color: #3b82f6;
+  text-decoration: none;
+  transition: text-decoration 0.2s ease;
+}
+
+.terminal-link:hover {
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.terminal-output {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.terminal-command {
+  color: #d4d4d4;
+}
+
+.terminal-command-keyword {
+  color: #e9e982;
+}
+
+.terminal-prompt {
+  color: #608b4e;
+}
+
+/* Styles pour la barre de défilement */
+.terminal-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #424242 #1e1e1e;
+}
+
+.terminal-scrollbar::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.terminal-scrollbar::-webkit-scrollbar-track {
+  background: #1e1e1e;
+  border-radius: 0;
+}
+
+.terminal-scrollbar::-webkit-scrollbar-thumb {
+  background: #424242;
+  border-radius: 0;
+  border: 2px solid #1e1e1e;
+}
+
+.terminal-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #4f4f4f;
+}
+
+.terminal-scrollbar::-webkit-scrollbar-corner {
+  background: #1e1e1e;
+}

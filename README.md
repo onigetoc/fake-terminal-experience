@@ -1,69 +1,69 @@
-# Welcome to your Lovable project
+# Fake Terminal Experience
 
-## Project info
+A React-based terminal emulator that provides a realistic command-line interface experience in the browser.
 
-**URL**: https://lovable.dev/projects/c1e1b187-eb7a-4b61-8fff-bfa1d0005c84
+## Features
 
-## How can I edit this code?
+- Realistic terminal UI with common terminal features
+- Draggable/resizable terminal window
+- Support for basic commands like `npm -v`, `node -v`, `npm run dev`
+- Terminal window controls (minimize, maximize, close)
+- Command history navigation (up/down arrows)
+- Custom command output simulation
+- Configurable prompt and theme
+- Copy/paste support
 
-There are several ways of editing your application.
+## Getting Started
 
-**Use Lovable**
+### Prerequisites
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/c1e1b187-eb7a-4b61-8fff-bfa1d0005c84) and start prompting.
+- Node.js (v20.11.0 or higher)
+- npm (v10.2.4 or higher)
 
-Changes made via Lovable will be committed automatically to this repo.
+### Installation
 
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
+1. Clone this repository:
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+git clone <repository-url>
+```
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+2. Navigate to project directory:
+```sh
+cd fake-terminal-experience
+```
 
-# Step 3: Install the necessary dependencies.
-npm i
+3. Install dependencies:
+```sh
+npm install
+```
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+4. Start the development server:
+```sh
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+5. Open your browser and visit http://localhost:5173
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Usage
 
-**Use GitHub Codespaces**
+The terminal supports the following commands:
+- `clear` - Clear the terminal screen
+- `help` - Display available commands
+- `npm -v` - Show npm version
+- `node -v` - Show Node.js version
+- `npm run dev` - Start development server
+- Use up/down arrows to navigate command history
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Configuration
 
-## What technologies are used for this project?
+You can customize the terminal by modifying the following files:
+- `src/config/terminal.config.ts` - Terminal settings
+- `src/themes/` - Terminal themes and styles
 
-This project is built with .
+## Contributing
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-## How can I deploy this project?
+## License
 
-Simply open [Lovable](https://lovable.dev/projects/c1e1b187-eb7a-4b61-8fff-bfa1d0005c84) and click on Share -> Publish.
-
-## I want to use a custom domain - is that possible?
-
-We don't support custom domains (yet). If you want to deploy your project under your own domain then we recommend using Netlify. Visit our docs for more details: [Custom domains](https://docs.lovable.dev/tips-tricks/custom-domain/)
+This project is licensed under the MIT License - see the LICENSE file for details.

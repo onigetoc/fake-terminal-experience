@@ -2,11 +2,56 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { X, Minus, Maximize2, Terminal as TerminalIcon, Trash2, Plus } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
+import '../../styles/terminal.css';
 
 interface TerminalOutput {
   command: string;
   output: string;
 }
+
+const formatTextWithLinks = (text: string) => {
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  return text.split(urlRegex).map((part, i) => {
+    if (part.match(urlRegex)) {
+      return (
+        <a 
+          key={i}
+          href={part}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="terminal-link"
+          onClick={(e) => {
+            e.preventDefault();
+            window.open(part, '_blank');
+          }}
+        >
+          {part}
+        </a>
+      );
+    }
+    return part;
+  });
+};
+
+const formatCommand = (command: string) => {
+  // Liste des mots-clés à mettre en évidence
+  const keywords = ['npm', 'node', 'bun', 'yarn', 'pnpm', 'clear', 'help'];
+  
+  return command.split(' ').map((word, index) => {
+    if (keywords.includes(word.toLowerCase())) {
+      return (
+        <span key={index} className="terminal-command-keyword">
+          {word}
+        </span>
+      );
+    }
+    return (
+      <span key={index} className="terminal-command">
+        {word}
+      </span>
+    );
+  }).reduce((prev, curr) => [prev, ' ', curr]);
+};
 
 const Terminal = () => {
   const [isOpen, setIsOpen] = useState(true);
@@ -183,7 +228,7 @@ VITE v5.4.6  ready in 241 ms
         <>
           <div 
             ref={terminalRef}
-            className={`overflow-y-auto p-4 font-mono text-sm ${
+            className={`overflow-y-auto p-4 font-mono text-sm terminal-scrollbar ${
               isFullscreen 
                 ? 'h-[calc(100vh-40px)]' 
                 : `h-[${height}px]`
@@ -192,23 +237,27 @@ VITE v5.4.6  ready in 241 ms
           >
             {history.map((entry, index) => (
               <div key={index} className="mb-2">
-                <div className="flex">
-                  <span className="text-[#608b4e] mr-2">&gt;</span>
-                  <span>{entry.command}</span>
+                <div className="flex items-center">
+                  <span className="terminal-prompt mr-2">&gt;</span>
+                  <div className="terminal-command">
+                    {formatCommand(entry.command)}
+                  </div>
                 </div>
-                <div className="ml-4 whitespace-pre-wrap">{entry.output}</div>
+                <div className="ml-4 terminal-output">
+                  {formatTextWithLinks(entry.output)}
+                </div>
               </div>
             ))}
           </div>
 
           {/* Command Input */}
           <form onSubmit={handleSubmit} className="p-2 border-t border-[#333] flex">
-            <span className="text-[#608b4e] mr-2 mt-2">&gt;</span>
+            <span className="terminal-prompt mr-2 mt-2">&gt;</span>
             <input
               type="text"
               value={command}
               onChange={(e) => setCommand(e.target.value)}
-              className="flex-1 bg-transparent border-none outline-none text-[#d4d4d4] font-mono"
+              className="flex-1 bg-transparent border-none outline-none terminal-command font-mono"
               placeholder="Type a command..."
             />
             <div className="flex space-x-2">
