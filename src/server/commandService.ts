@@ -4,7 +4,7 @@ import path from 'path';
 import * as os from 'os';
 import iconv from 'iconv-lite';
 import { isCustomCommand, executeCustomCommand } from '../services/customCommands';
-import shell from 'shelljs';
+// import shell from 'shelljs';
 
 const execAsync = promisify(exec);
 let currentWorkingDirectory = process.cwd();
@@ -72,6 +72,7 @@ export async function executeCommand(command: string): Promise<CommandResult> {
         child.on('close', () => {
           resolve({
             stdout: iconv.decode(stdout, 'cp437'),
+            // stdout: stdout,
             stderr: '',
             newCwd: currentWorkingDirectory
           });
@@ -79,15 +80,42 @@ export async function executeCommand(command: string): Promise<CommandResult> {
       });
     }
 
+    const cmdName = cmd.split(' ')[0];
+
+    // Pour les commandes npm
+    if (cmdName === 'npm') {
+      const { stdout, stderr } = await execAsync(cmd, {
+        encoding: 'utf8',
+        cwd: currentWorkingDirectory,
+        env: {
+          ...process.env,
+          FORCE_COLOR: '1',  // Forcer les couleurs
+          npm_config_color: 'always',  // Forcer les couleurs pour npm
+          TERM: 'xterm-256color'
+        }
+      });
+
+      return {
+        stdout: stdout.toString('utf8'),  // Préserver les codes ANSI
+        stderr: stderr.toString('utf8'),
+        newCwd: currentWorkingDirectory
+      };
+    }
+
     // Autres commandes
     const { stdout, stderr } = await execAsync(cmd, {
-      encoding: 'buffer',
-      cwd: currentWorkingDirectory
+      encoding: 'utf8',  // Utiliser utf8 directement
+      cwd: currentWorkingDirectory,
+      env: {
+        ...process.env,
+        FORCE_COLOR: '1',  // Forcer les couleurs
+        TERM: 'xterm-256color'
+      }
     });
 
     return {
-      stdout: iconv.decode(stdout, 'utf8'),
-      stderr: iconv.decode(stderr, 'utf8'),
+      stdout: stdout,
+      stderr: stderr,
       newCwd: currentWorkingDirectory
     };
 

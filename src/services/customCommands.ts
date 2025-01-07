@@ -1,13 +1,13 @@
 const CUSTOM_COMMANDS = {
-  help: () => `
-Available commands:
+  help: () => `Available commands:
   help    - Show this help message
   about   - About this terminal
   clear   - Clear terminal screen`,
 
-  about: () => `
-Terminal Emulator v1.0
-Built with React + Vite`,
+  about: () => 
+`Terminal Emulator v1.0
+Built with React + Vite
+Github Repository: https://github.com/onigetoc/fake-terminal-experience`,
 };
 
 export function isCustomCommand(command: string): boolean {

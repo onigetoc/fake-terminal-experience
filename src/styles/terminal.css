@@ -1,12 +1,12 @@
 .terminal-link {
-  color: #3b82f6;
+  color: #3794ff;  /* Bleu VS Code */
   text-decoration: none;
-  transition: text-decoration 0.2s ease;
+  cursor: pointer;
 }
 
 .terminal-link:hover {
   text-decoration: underline;
-  cursor: pointer;
+  color: #3794ff;  /* Maintenir la même couleur au hover */
 }
 
 .terminal-output {
@@ -20,11 +20,11 @@
 }
 
 .terminal-command {
-  color: #d4d4d4;
+  color: #f1f1f1;  /* Plus blanc qu'avant (était #d4d4d4) */
 }
 
 .terminal-command-keyword {
-  color: #e9e982;
+  color: #ebeb40;
 }
 
 .terminal-prompt {

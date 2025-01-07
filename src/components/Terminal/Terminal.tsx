@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
-import { X, Minus, Maximize2, Terminal as TerminalIcon, Trash2, Plus, Loader2 } from 'lucide-react';
+import { X, Minus, Maximize2, Terminal as TerminalIcon, Trash2, Plus, Loader2, HelpCircle, Eraser, Info } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
 import '../../styles/terminal.css';
 import { executeRemoteCommand } from '../../services/terminalApi';
 import { isCustomCommand, executeCustomCommand } from '../../services/customCommands';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface TerminalOutput {
   command: string;
@@ -49,13 +50,69 @@ const formatCommand = (command: string) => {
   );
 };
 
+const parseAnsiColor = (text: string) => {
+  // Regex qui capture à la fois les codes simples et composés
+  const ansiRegex = /\u001b\[(\d+(?:;\d+)*)?m/g;
+  
+  const colorMap: Record<string, string> = {
+    // Codes simples
+    '31': 'text-red-500',
+    '32': 'text-green-500',
+    '33': 'text-yellow-500',
+    '34': 'text-blue-500',
+    '35': 'text-purple-500', // ERROR ???
+    // '35': 'text-red-400',
+    '36': 'text-cyan-500',
+    '37': 'text-gray-100',
+    '90': 'text-gray-500',
+    // Reset
+    '0': '',
+    // Le code pour 'extraneous' (probablement en gris)
+    '39': 'text-gray-300'
+  };
+
+  const parts = [];
+  let lastIndex = 0;
+  let currentClass = '';
+  let match;
+
+  while ((match = ansiRegex.exec(text)) !== null) {
+    // Ajouter le texte avant le code ANSI
+    if (match.index > lastIndex) {
+      parts.push(
+        <span key={lastIndex} className={currentClass}>
+          {text.slice(lastIndex, match.index)}
+        </span>
+      );
+    }
+
+    // Mettre à jour la classe de couleur
+    if (match[1]) {
+      currentClass = colorMap[match[1]] || currentClass;
+    }
+
+    lastIndex = match.index + match[0].length;
+  }
+
+  // Ajouter le reste du texte
+  if (lastIndex < text.length) {
+    parts.push(
+      <span key={lastIndex} className={currentClass}>
+        {text.slice(lastIndex)}
+      </span>
+    );
+  }
+
+  return parts;
+};
+
 const Terminal = () => {
   const [isOpen, setIsOpen] = useState(true);
   const [isMinimized, setIsMinimized] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [command, setCommand] = useState('');
   const [history, setHistory] = useState<TerminalOutput[]>([]);
-  const [height, setHeight] = useState(200);
+  const [height, setHeight] = useState(220);
   const [isDragging, setIsDragging] = useState(false);
   const terminalRef = useRef<HTMLDivElement>(null);
   const dragStartY = useRef<number>(0);
@@ -188,9 +245,30 @@ const Terminal = () => {
   };
 
   const formatOutput = (output: string) => {
+    // Regex pour détecter les URLs
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    const parts = output.split(urlRegex);
+
     return (
       <pre className="whitespace-pre-wrap break-words font-mono">
-        {output}
+        {parts.map((part, i) => {
+          if (part.match(urlRegex)) {
+            return (
+              <a
+                key={i}
+                href={part}
+                className="terminal-link"
+                onClick={(e) => {
+                  e.preventDefault();
+                  window.open(part, '_blank', 'noopener,noreferrer');
+                }}
+              >
+                {part}
+              </a>
+            );
+          }
+          return <span key={i}>{parseAnsiColor(part)}</span>;
+        })}
       </pre>
     );
   };
@@ -302,7 +380,7 @@ const Terminal = () => {
 
           {/* Command Input */}
           <form onSubmit={handleSubmit} className="p-2 border-t border-[#333] flex">
-            <span className="terminal-prompt mr-2 mt-2">&gt;</span>
+            <span className="terminal-prompt mr-2 mt-1">&gt;</span>
             <input
               type="text"
               value={command}
@@ -310,23 +388,59 @@ const Terminal = () => {
               className="flex-1 bg-transparent border-none outline-none terminal-command font-mono"
               placeholder="Type a command..."
             />
-            <div className="flex space-x-2">
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                onClick={() => executeCommand('help')}
-              >
-                Help
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                onClick={() => executeCommand('clear')}
-              >
-                Clear
-              </Button>
+            <div className="flex space-x-2"> 
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => executeCommand('clear')}
+                    >
+                      <Eraser className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Clear terminal</p>
+                  </TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 bg-[#323233]"
+                      onClick={() => executeCommand('help')}
+                    >
+                      <HelpCircle className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Help</p>
+                  </TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 bg-[#323233]"
+                      onClick={() => executeCommand('about')}
+                    >
+                      <Info className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>About</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
           </form>
         </>
