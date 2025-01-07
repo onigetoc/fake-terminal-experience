@@ -4,7 +4,10 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "concurrently \"bun --hot src/server/index.ts\" \"bun vite --port 8080\"",
+    "devbefore": "concurrently \"bun run server\" \"bun vite\"",
+    "frontend": "bun --bun vite",
+    "server": "bun --watch src/server/index.ts",
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",

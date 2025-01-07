@@ -14,6 +14,11 @@
   word-break: break-word;
 }
 
+.terminal-output pre {
+  margin: 0;
+  font-family: 'Consolas', 'Courier New', monospace;
+}
+
 .terminal-command {
   color: #d4d4d4;
 }

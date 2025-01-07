@@ -1,12 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
-import { X, Minus, Maximize2, Terminal as TerminalIcon, Trash2, Plus } from 'lucide-react';
+import { X, Minus, Maximize2, Terminal as TerminalIcon, Trash2, Plus, Loader2 } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
 import '../../styles/terminal.css';
+import { executeRemoteCommand } from '../../services/terminalApi';
+import { isCustomCommand, executeCustomCommand } from '../../services/customCommands';
 
 interface TerminalOutput {
   command: string;
   output: string;
+  isLoading?: boolean;  // Ajout d'un flag de chargement par commande
 }
 
 const formatTextWithLinks = (text: string) => {
@@ -52,12 +55,13 @@ const Terminal = () => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [command, setCommand] = useState('');
   const [history, setHistory] = useState<TerminalOutput[]>([]);
-  const [height, setHeight] = useState(300); // Default height
+  const [height, setHeight] = useState(200);
   const [isDragging, setIsDragging] = useState(false);
   const terminalRef = useRef<HTMLDivElement>(null);
   const dragStartY = useRef<number>(0);
   const dragStartHeight = useRef<number>(0);
   const { toast } = useToast();
+  const [currentDirectory, setCurrentDirectory] = useState<string>('');
 
   const scrollToBottom = () => {
     if (terminalRef.current) {
@@ -68,6 +72,25 @@ const Terminal = () => {
   useEffect(() => {
     scrollToBottom();
   }, [history]);
+
+  // Initialiser le répertoire courant
+  useEffect(() => {
+    const initializeDirectory = async () => {
+      try {
+        const { stdout, newCwd } = await executeRemoteCommand('pwd');
+        if (newCwd) {
+          setCurrentDirectory(newCwd);
+        } else if (stdout) {
+          setCurrentDirectory(stdout);
+        }
+      } catch (error) {
+        console.error('Failed to initialize directory:', error);
+        setCurrentDirectory('Directory not available');
+      }
+    };
+
+    initializeDirectory();
+  }, []);
 
   // Handle mouse events for resizing
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -104,48 +127,72 @@ const Terminal = () => {
     };
   }, [isDragging, isFullscreen]);
 
-  const simulateCommand = (cmd: string): string => {
-    // Simulate common npm and system commands
-    if (cmd === 'npm -v') {
-      return '10.2.4';
-    } else if (cmd === 'node -v') {
-      return 'v20.11.0';
-    } else if (cmd === 'npm run dev') {
-      return `
-VITE v5.4.6  ready in 241 ms
+  const simulateCommand = async (cmd: string): Promise<string> => {
+    try {
+      const { stdout, stderr, newCwd } = await executeRemoteCommand(cmd);
+      
+      // Mise à jour du répertoire courant si changé
+      if (newCwd && newCwd !== currentDirectory) {
+        setCurrentDirectory(newCwd);
+        console.log('Directory updated to:', newCwd); // Pour debug
+      }
 
-➜  Local:   http://localhost:5173/
-➜  Network: http://192.168.1.100:5173/
-➜  press h + enter to show help`;
-    } else if (cmd === 'help') {
-      return `Available commands:
-- help: Show this help message
-- clear: Clear terminal
-- npm -v: Show npm version
-- node -v: Show node version
-- npm run dev: Start development server
-`;
+      return stderr || stdout || 'Command executed successfully';
+    } catch (error) {
+      console.error('Command execution error:', error);
+      return `Error: ${error instanceof Error ? error.message : 'Unknown error occurred'}`;
     }
-    return `Command not found: ${cmd}`;
   };
 
-  const executeCommand = (cmd: string) => {
+  const executeCommand = async (cmd: string) => {
     if (!cmd.trim()) return;
 
     if (cmd === 'clear') {
       setHistory([]);
-      setCommand('');  // Clear the input field for the 'clear' command
+      setCommand('');
       return;
     }
 
-    const output = simulateCommand(cmd);
-    setHistory(prev => [...prev, { command: cmd, output }]);
+    // Ajouter la commande à l'historique
+    const newCommandIndex = history.length;
+    setHistory(prev => [...prev, { 
+      command: cmd, 
+      output: '',
+      isLoading: true 
+    }]);
+    
+    // Vider l'input immédiatement
     setCommand('');
+
+    try {
+      const output = await simulateCommand(cmd);
+      setHistory(prev => [
+        ...prev.slice(0, newCommandIndex),
+        { command: cmd, output, isLoading: false },
+        ...prev.slice(newCommandIndex + 1)
+      ]);
+    } catch (error) {
+      console.error('Error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      setHistory(prev => [
+        ...prev.slice(0, newCommandIndex),
+        { command: cmd, output: `Error: ${errorMessage}`, isLoading: false },
+        ...prev.slice(newCommandIndex + 1)
+      ]);
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     executeCommand(command);
+  };
+
+  const formatOutput = (output: string) => {
+    return (
+      <pre className="whitespace-pre-wrap break-words font-mono">
+        {output}
+      </pre>
+    );
   };
 
   if (!isOpen) {
@@ -219,6 +266,9 @@ VITE v5.4.6  ready in 241 ms
       {/* Terminal Content - Only show if not minimized */}
       {!isMinimized && (
         <>
+          <div className="p-2 bg-[#252526] border-b border-[#333] text-xs text-gray-400">
+            Current directory: {currentDirectory || 'Loading...'}
+          </div>
           <div 
             ref={terminalRef}
             className={`overflow-y-auto p-4 font-mono text-sm terminal-scrollbar ${
@@ -237,7 +287,14 @@ VITE v5.4.6  ready in 241 ms
                   </div>
                 </div>
                 <div className="ml-4 terminal-output">
-                  {formatTextWithLinks(entry.output)}
+                  {entry.isLoading ? (
+                    <div className="flex items-center gap-2 text-gray-400">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Executing command...</span>
+                    </div>
+                  ) : (
+                    formatOutput(entry.output)
+                  )}
                 </div>
               </div>
             ))}

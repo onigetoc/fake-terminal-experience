@@ -1,0 +1,6 @@
+[install]
+peer = true
+production = false
+
+[dev]
+port = 5173
