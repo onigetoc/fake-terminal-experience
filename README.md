@@ -24,7 +24,7 @@ A React-based terminal emulator that provides a realistic command-line interface
 
 1. Clone this repository:
 ```sh
-git clone <repository-url>
+git clone https://github.com/onigetoc/fake-terminal-experience.git
 ```
 
 2. Navigate to project directory:
