@@ -371,7 +371,7 @@ const Terminal = () => {
                       <span>Executing command...</span>
                     </div>
                   ) : (
-                    formatOutput(entry.output)
+                    formatOutput(entry.output) 
                   )}
                 </div>
               </div>
