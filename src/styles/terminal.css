@@ -7,6 +7,7 @@
 .terminal-link:hover {
   text-decoration: underline;
   color: #3794ff;  /* Maintenir la même couleur au hover */
+  opacity: 0.8;
 }
 
 .terminal-output {
@@ -34,12 +35,11 @@
 /* Styles pour la barre de défilement */
 .terminal-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: #424242 #1e1e1e;
+  scrollbar-color: #666 #1e1e1e;
 }
 
 .terminal-scrollbar::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 8px;
 }
 
 .terminal-scrollbar::-webkit-scrollbar-track {
@@ -48,8 +48,8 @@
 }
 
 .terminal-scrollbar::-webkit-scrollbar-thumb {
-  background: #424242;
-  border-radius: 0;
+  background: #666;
+  border-radius: 4px;
   border: 2px solid #1e1e1e;
 }
 
@@ -59,4 +59,50 @@
 
 .terminal-scrollbar::-webkit-scrollbar-corner {
   background: #1e1e1e;
+}
+
+/* Remove these styles as they were causing issues */
+.terminal-content,
+.fullscreen-content,
+.fixed.bg-\[\#1e1e1e\] {
+  /* Remove problematic styles */
+}
+
+/* Terminal content and input container */
+.terminal-content {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+.terminal-input-container {
+  position: relative;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: #1e1e1e;
+  z-index: 10;
+  min-height: 42px; /* Ensure minimum height for input area */
+  width: 100%;
+}
+
+/* Fullscreen specific styles */
+.fullscreen-content {
+  height: calc(100vh - 110px) !important; /* 40px header + 28px directory bar + 42px input container */
+  max-height: calc(100vh - 110px);
+  overflow-y: auto;
+}
+
+/* Ensure the terminal container uses flex in fullscreen */
+.fixed.bg-\[\#1e1e1e\] {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Add specific styles for the floating button */
+.floating-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: row !important;
 }

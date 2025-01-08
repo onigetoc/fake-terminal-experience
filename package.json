@@ -1,16 +1,14 @@
 {
   "name": "vite_react_shadcn_ts",
-  "private": true,
+  "private": false,
   "version": "0.0.0",
   "type": "module",
+  "author": "Onigetoc",
   "scripts": {
-    "dev": "concurrently \"bun --hot src/server/index.ts\" \"bun vite --port 8080\"",
-    "devbefore": "concurrently \"bun run server\" \"bun vite\"",
+    "dev": "concurrently \"bun run server\" \"bun run frontend\"",
     "frontend": "bun --bun vite",
     "server": "bun --watch src/server/index.ts",
     "build": "vite build",
-    "build:dev": "vite build --mode development",
-    "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -46,8 +44,12 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.0.0",
+    "concurrently": "^8.2.2",
+    "cross-env": "^7.0.3",
     "date-fns": "^3.6.0",
+    "dotenv": "^16.4.7",
     "embla-carousel-react": "^8.3.0",
+    "iconv-lite": "^0.6.3",
     "input-otp": "^1.2.4",
     "lucide-react": "^0.462.0",
     "next-themes": "^0.3.0",
@@ -62,13 +64,14 @@
     "sonner": "^1.5.0",
     "tailwind-merge": "^2.5.2",
     "tailwindcss-animate": "^1.0.7",
+    "ts-node": "^10.9.2",
     "vaul": "^0.9.3",
     "zod": "^3.23.8"
   },
   "devDependencies": {
     "@eslint/js": "^9.9.0",
     "@tailwindcss/typography": "^0.5.15",
-    "@types/node": "^22.5.5",
+    "@types/node": "^20.17.12",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react-swc": "^3.5.0",

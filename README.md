@@ -13,6 +13,15 @@ A React-based terminal emulator that provides a realistic command-line interface
 - Configurable prompt and theme
 - Copy/paste support
 
+## Screenshots
+
+Here are some screenshots of the Fake Terminal Experience in action:
+
+### Terminal UI
+![Terminal UI](https://raw.githubusercontent.com/onigetoc/fake-terminal-experience/refs/heads/main/public/terminal-screenshot.png)
+
+![Terminal UI anime](https://raw.githubusercontent.com/onigetoc/fake-terminal-experience/refs/heads/main/public/terminal-anime.gif)
+
 ## Getting Started
 
 ### Prerequisites
@@ -41,6 +50,74 @@ npm install
 ```sh
 npm run dev
 ```
+
+
+## How to use in your own project
+
+To use the Fake Terminal Experience in your project, follow these steps:
+
+1. Clone this repository:
+```sh
+git clone https://github.com/onigetoc/fake-terminal-experience.git
+```
+
+2. Copy all folders and files from the fake-terminal-experience project into your React project, except for `pages/index.tsx` to avoid overwriting your existing index file.
+
+3. In your `package.json`, add the following script:
+    ```json
+    "scripts": {
+      "start:terminal-server": "node src/server/index.js"
+    }
+    ```
+
+4. Install the necessary dependencies (list the main dependencies here).
+
+5. Run the server:
+    ```bash
+    npm run start:terminal-server
+    ```
+
+## Usage
+
+To use the terminal in your React component, import and add the Terminal component:
+```javascript
+import Terminal from "@/components/Terminal/Terminal";
+
+const YourComponent = () => {
+  return (
+    <div>
+      <h1>Your Component</h1>
+      <Terminal />
+    </div>
+  );
+};
+
+export default YourComponent;
+```
+
+### Example Usage
+
+```javascript
+import Terminal from "@/components/Terminal/Terminal";
+
+const Index = () => {
+  return (
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto p-4">
+        <h1 className="text-4xl font-bold mb-4">Terminal Demo</h1>
+        <p className="text-lg text-muted-foreground mb-8">
+          Try running some commands like "npm -v" or type "help" to see available commands.
+        </p>
+      </div>
+      <Terminal />
+    </div>
+  );
+};
+
+export default Index;
+```
+
+Make sure to start both your React application and the terminal server for full functionality.
 
 5. Open your browser and visit http://localhost:5173
 

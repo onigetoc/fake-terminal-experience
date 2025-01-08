@@ -8,10 +8,11 @@ interface CommandResponse {
 
 export async function executeRemoteCommand(command: string): Promise<CommandResponse> {
   try {
+    // Envoyer la commande directement, sans encodage supplémentaire
     const response = await fetch(`${API_URL}/execute`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json; charset=utf-8',
       },
       body: JSON.stringify({ command }),
     });

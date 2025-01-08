@@ -289,7 +289,7 @@ const Terminal = () => {
   if (!isOpen) {
     return (
       <Button
-        className="fixed bottom-4 right-4 bg-[#1e1e1e] text-white"
+        className="fixed bottom-4 right-4 bg-[#1e1e1e] text-white floating-button"
         onClick={() => setIsOpen(true)}
       >
         <TerminalIcon className="w-4 h-4 mr-2" />

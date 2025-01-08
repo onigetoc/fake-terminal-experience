@@ -12,6 +12,18 @@ dist
 dist-ssr
 *.local
 
+# Ignorer tous les fichiers contenant "copy" dans le nom
+*copy*
+*Copy*
+*COPY*
+
+# Ignorer les variations spécifiques
+*.copy.*
+*-copy.*
+*_copy.*
+*copy-*
+*copy_*
+
 # Environment variables
 .env
 .env.local

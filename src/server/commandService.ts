@@ -102,20 +102,49 @@ export async function executeCommand(command: string): Promise<CommandResult> {
       };
     }
 
+    // Pour les commandes echo
+    if (cmdName === 'echo') {
+      const { stdout, stderr } = await execAsync(cmd, {
+        encoding: 'buffer',
+        cwd: currentWorkingDirectory,
+        env: {
+          ...process.env,
+          FORCE_COLOR: '1',
+          TERM: 'xterm-256color',
+          LANG: 'fr_FR.UTF-8',
+          LC_ALL: 'fr_FR.UTF-8'
+        }
+      });
+
+      // Utiliser cp850 pour les commandes echo
+      const cleanStdout = iconv.decode(stdout, 'cp850');
+      const cleanStderr = iconv.decode(stderr, 'cp850');
+
+      return {
+        stdout: cleanStdout,
+        stderr: cleanStderr,
+        newCwd: currentWorkingDirectory
+      };
+    }
+
     // Autres commandes
     const { stdout, stderr } = await execAsync(cmd, {
-      encoding: 'utf8',  // Utiliser utf8 directement
+      encoding: 'buffer',  // Changement ici: utiliser buffer au lieu de utf8
       cwd: currentWorkingDirectory,
       env: {
         ...process.env,
-        FORCE_COLOR: '1',  // Forcer les couleurs
+        FORCE_COLOR: '1',
         TERM: 'xterm-256color'
       }
     });
 
+    // Convertir la sortie avec le bon encodage
+    const cleanStdout = iconv.decode(stdout, 'cp850');
+    const cleanStderr = iconv.decode(stderr, 'cp850');
+
     return {
-      stdout: stdout,
-      stderr: stderr,
+      stdout: cleanStdout,
+      stderr: cleanStderr,
       newCwd: currentWorkingDirectory
     };
 
