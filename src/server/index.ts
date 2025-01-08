@@ -1,55 +1,35 @@
-import { serve } from "bun";
-import { executeCommand } from './commandService';
-import { config } from 'dotenv';
-import { resolve } from 'path';
+import express from 'express';
+import cors from 'cors';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+import { executeCommand } from './commandService.js';
 
-// Charger les variables d'environnement
-config({ path: resolve(__dirname, '../../.env') });
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
-// Forcer le port 3000
-const server = serve({
-  port: 3001,  // Changement du port par défaut à 3001
-  async fetch(req) {
-    // Enable CORS with proper encoding
-    if (req.method === 'OPTIONS') {
-      return new Response(null, {
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'POST, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type',
-          'Content-Type': 'application/json; charset=utf-8'
-        }
-      });
-    }
+const app = express();
+const PORT = 3001;
 
-    if (req.method === 'POST') {
-      try {
-        const body = await req.json();
-        const { command } = body;
-        const result = await executeCommand(command);
-        
-        return new Response(JSON.stringify(result), {
-          headers: {
-            'Content-Type': 'application/json; charset=utf-8',
-            'Access-Control-Allow-Origin': '*'
-          }
-        });
-      } catch (error) {
-        return new Response(
-          JSON.stringify({ error: 'Internal Server Error' }), 
-          { 
-            status: 500,
-            headers: {
-              'Content-Type': 'application/json; charset=utf-8'
-            }
-          }
-        );
-      }
-    }
+app.use(cors());
+app.use(express.json());
 
-    return new Response('Method not allowed', { status: 405 });
+// Ajouter une route de test
+app.get('/', (req, res) => {
+  res.json({ message: 'Server is running!' });
+});
+
+app.post('/execute', async (req, res) => {
+  try {
+    const { command } = req.body;
+    const result = await executeCommand(command);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ 
+      error: error instanceof Error ? error.message : 'Internal Server Error' 
+    });
   }
 });
 
-console.log(`Server running at http://localhost:${server.port}`);
-console.log('Press Ctrl + C to stop the server');
+app.listen(PORT, () => {
+  console.log(`Server running at http://localhost:${PORT}`);
+});
