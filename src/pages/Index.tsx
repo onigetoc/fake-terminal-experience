@@ -80,6 +80,22 @@ const Index = () => {
             <TerminalIcon className="h-4 w-4" />
             Open Github Project in browser
           </Button>
+          <Button
+            variant="outline"
+            onClick={() => handleRunCommand(['tree /f'])}
+            className="flex items-center gap-2"
+          >
+            <TerminalIcon className="h-4 w-4" />
+            Get folder tree
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => handleRunCommand(['wmic product get name'])}
+            className="flex items-center gap-2"
+          >
+            <TerminalIcon className="h-4 w-4" />
+            Programs installed on your PC
+          </Button>
         </div>
       </div>
       <Terminal ref={terminalRef} />
