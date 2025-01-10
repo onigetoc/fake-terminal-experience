@@ -1,11 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
-import { X, Minus, Maximize2, Terminal as TerminalIcon, Trash2, Plus, Loader2, HelpCircle, Eraser, Info } from 'lucide-react';
+import { X, Minus, Maximize2, Terminal as TerminalIcon, Trash2, Plus, Loader2, HelpCircle, Eraser, Info, FolderOpen } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
 import '../../styles/terminal.css';
 import { executeRemoteCommand } from '../../services/terminalApi';
 import { isCustomCommand, executeCustomCommand } from '../../services/customCommands';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { getFullPath } from "../../utils/pathUtils";
 
 interface TerminalOutput {
   command: string;
@@ -106,7 +107,7 @@ const parseAnsiColor = (text: string) => {
   return parts;
 };
 
-const Terminal = () => {
+const Terminal = React.forwardRef((props, ref) => {
   const [isOpen, setIsOpen] = useState(true);
   const [isMinimized, setIsMinimized] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -249,6 +250,11 @@ const Terminal = () => {
     }
   };
 
+  // Exposer executeCommand via la ref
+  React.useImperativeHandle(ref, () => ({
+    executeCommand
+  }));
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // Séparer les commandes par point-virgule
@@ -326,6 +332,22 @@ const Terminal = () => {
             onClick={() => setHistory([])}
           >
             <Trash2 className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6"
+            onClick={async () => {
+              try {
+                const dirHandle = await (window as any).showDirectoryPicker();
+                const fullPath = getFullPath(dirHandle.name);
+                executeCommand(`cd "${fullPath}"`);
+              } catch (err) {
+                console.error('Erreur lors de la sélection du dossier:', err);
+              }
+            }}
+          >
+            <FolderOpen className="h-4 w-4" />
           </Button>
           <Button
             variant="ghost"
@@ -461,6 +483,6 @@ const Terminal = () => {
       )}
     </div>
   );
-};
+});
 
 export default Terminal;
