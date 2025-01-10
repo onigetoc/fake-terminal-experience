@@ -64,6 +64,22 @@ const Index = () => {
             <TerminalIcon className="h-4 w-4" />
             Help, About & Node -v
           </Button>
+          <Button
+            variant="outline"
+            onClick={() => handleRunCommand(['explorer "https://www.google.com/search?q=fake+terminal"'])}
+            className="flex items-center gap-2"
+          >
+            <TerminalIcon className="h-4 w-4" />
+            Open Browser & Google search
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => handleRunCommand(['explorer "https://github.com/onigetoc/fake-terminal-experience"'])}
+            className="flex items-center gap-2"
+          >
+            <TerminalIcon className="h-4 w-4" />
+            Open Github Project in browser
+          </Button>
         </div>
       </div>
       <Terminal ref={terminalRef} />

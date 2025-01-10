@@ -120,6 +120,14 @@ const Terminal = React.forwardRef((props, ref) => {
   const dragStartHeight = useRef<number>(0);
   const { toast } = useToast();
   const [currentDirectory, setCurrentDirectory] = useState<string>('');
+  const [osInfo] = useState(() => {
+    // Détection simple du système d'exploitation côté client
+    const userAgent = window.navigator.userAgent;
+    if (userAgent.indexOf('Win') !== -1) return 'Windows';
+    if (userAgent.indexOf('Mac') !== -1) return 'MacOS';
+    if (userAgent.indexOf('Linux') !== -1) return 'Linux';
+    return 'Unknown OS';
+  });
 
   const scrollToBottom = () => {
     if (terminalRef.current) {
@@ -379,8 +387,9 @@ const Terminal = React.forwardRef((props, ref) => {
       {/* Terminal Content - Only show if not minimized */}
       {!isMinimized && (
         <>
-          <div className="p-2 bg-[#252526] border-b border-[#333] text-xs text-gray-400">
-            Current directory: {currentDirectory || 'Loading...'}
+          <div className="p-2 bg-[#252526] border-b border-[#333] text-xs text-gray-400 flex justify-between items-center">
+            <div>Current directory: {currentDirectory || 'Loading...'}</div>
+            <div>User OS: {osInfo}</div>
           </div>
           <div 
             ref={terminalRef}
