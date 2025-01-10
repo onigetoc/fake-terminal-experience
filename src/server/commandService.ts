@@ -84,22 +84,44 @@ export async function executeCommand(command: string): Promise<CommandResult> {
 
     // Pour les commandes npm
     if (cmdName === 'npm') {
-      const { stdout, stderr } = await execAsync(cmd, {
-        encoding: 'utf8',
-        cwd: currentWorkingDirectory,
-        env: {
-          ...process.env,
-          FORCE_COLOR: '1',  // Forcer les couleurs
-          npm_config_color: 'always',  // Forcer les couleurs pour npm
-          TERM: 'xterm-256color'
-        }
-      });
+      try {
+        const { stdout, stderr } = await execAsync(cmd, {
+          encoding: 'utf8',
+          cwd: currentWorkingDirectory,
+          env: {
+            ...process.env,
+            FORCE_COLOR: '1',  // Forcer les couleurs
+            npm_config_color: 'always',  // Forcer les couleurs pour npm
+            TERM: 'xterm-256color'
+          }
+        });
 
-      return {
-        stdout: stdout.toString('utf8'),  // Préserver les codes ANSI
-        stderr: stderr.toString('utf8'),
-        newCwd: currentWorkingDirectory
-      };
+        // Combiner stdout et stderr pour npm ls
+        if (cmd === 'npm ls') {
+          return {
+            stdout: `${stdout}\n${stderr}`,  // Combiner les deux sorties
+            stderr: '',  // On laisse stderr vide car on l'a déjà inclus dans stdout
+            newCwd: currentWorkingDirectory
+          };
+        }
+
+        return {
+          stdout: stdout.toString('utf8'),
+          stderr: stderr.toString('utf8'),
+          newCwd: currentWorkingDirectory
+        };
+      } catch (error) {
+        // Pour npm ls, on veut quand même afficher la sortie même en cas d'erreur
+        if (cmd === 'npm ls' && error instanceof Error) {
+          const { stdout, stderr } = error as any;
+          return {
+            stdout: `${stdout || ''}\n${stderr || ''}`,
+            stderr: '',
+            newCwd: currentWorkingDirectory
+          };
+        }
+        throw error;
+      }
     }
 
     // Pour les commandes echo
