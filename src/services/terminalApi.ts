@@ -8,13 +8,19 @@ interface CommandResponse {
 
 export async function executeRemoteCommand(command: string): Promise<CommandResponse> {
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+
     const response = await fetch(`${API_URL}/execute`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ command }),
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       const error = await response.json();
@@ -23,7 +29,12 @@ export async function executeRemoteCommand(command: string): Promise<CommandResp
 
     return await response.json();
   } catch (error) {
-    console.error('API Error:', error);
-    throw error;
+    if (error instanceof Error) {
+      if (error.name === 'AbortError') {
+        throw new Error('Command execution timed out');
+      }
+      throw error;
+    }
+    throw new Error('Unknown error occurred');
   }
 }

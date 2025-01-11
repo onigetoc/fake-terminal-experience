@@ -7,6 +7,7 @@ import { executeRemoteCommand } from '../../services/terminalApi';
 import { isCustomCommand, executeCustomCommand } from '../../services/customCommands';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { getFullPath } from "../../utils/pathUtils";
+import { translateCommand, shouldTranslateCommand } from '../../utils/osCommands';
 
 interface TerminalOutput {
   command: string;
@@ -195,12 +196,14 @@ const Terminal = React.forwardRef((props, ref) => {
 
   const simulateCommand = async (cmd: string): Promise<string> => {
     try {
-      const { stdout, stderr, newCwd } = await executeRemoteCommand(cmd);
+      // Traduire la commande si nécessaire
+      const translatedCmd = shouldTranslateCommand(cmd) ? translateCommand(cmd) : cmd;
+      
+      const { stdout, stderr, newCwd } = await executeRemoteCommand(translatedCmd);
       
       // Mise à jour du répertoire courant si changé
       if (newCwd && newCwd !== currentDirectory) {
         setCurrentDirectory(newCwd);
-        console.log('Directory updated to:', newCwd); // Pour debug
       }
 
       return stderr || stdout || 'Command executed successfully';
@@ -225,35 +228,44 @@ const Terminal = React.forwardRef((props, ref) => {
       // Ajouter la commande à l'historique avec isLoading=true
       setHistory(prev => [...prev, { command, output: '', isLoading: true }]);
 
-      // Attendre que l'état de l'historique soit mis à jour
-      await new Promise(resolve => setTimeout(resolve, 100)); // Petit délai ajouté
-
       try {
-        const output = await simulateCommand(command);
-
-        // Mettre à jour l'historique avec l'output et isLoading=false
-        setHistory(prev => {
-          const newHistory = [...prev];
-          const currentIndex = newHistory.length - 1;
-          newHistory[currentIndex] = { command, output, isLoading: false };
-          return newHistory;
+        // Ajouter un timeout de 30 secondes
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Command execution timeout')), 60000);
         });
 
-        // Attendre que la mise à jour de l'état soit terminée
-        await new Promise(resolve => setTimeout(resolve, 100)); // Petit délai ajouté
+        const outputPromise = simulateCommand(command);
+        const output = await Promise.race([outputPromise, timeoutPromise]);
+
+        setHistory(prev => {
+          const newHistory = [...prev];
+          const lastEntry = newHistory[newHistory.length - 1];
+          if (lastEntry && lastEntry.command === command) {
+            lastEntry.output = String(output);
+            lastEntry.isLoading = false;
+          }
+          return newHistory;
+        });
       } catch (error) {
-        console.error('Error:', error);
-        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-
+        console.error('Error executing command:', error);
+        
+        // S'assurer que l'état isLoading est mis à false même en cas d'erreur
         setHistory(prev => {
           const newHistory = [...prev];
-          const currentIndex = newHistory.length - 1;
-          newHistory[currentIndex] = { command, output: `Error: ${errorMessage}`, isLoading: false };
+          const lastEntry = newHistory[newHistory.length - 1];
+          if (lastEntry && lastEntry.command === command) {
+            lastEntry.output = `Error: ${error instanceof Error ? error.message : 'Unknown error occurred'}`;
+            lastEntry.isLoading = false;
+          }
           return newHistory;
         });
 
-        // Arrêter l'exécution des commandes suivantes en cas d'erreur
-        break;
+        // Optionnellement afficher un toast d'erreur
+        toast({
+          variant: "destructive",
+          title: "Command Error",
+          description: error instanceof Error ? error.message : 'Unknown error occurred',
+        });
       }
     }
   };

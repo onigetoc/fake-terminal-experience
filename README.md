@@ -12,6 +12,37 @@ A React-based terminal emulator that provides a realistic command-line interface
 - Custom command output simulation
 - Configurable prompt and theme
 - Copy/paste support
+- **Cross-Platform Command Translation**: Automatically translates commands between different operating systems
+  - Example: `ls` on Windows becomes `dir`, and `dir` on Unix becomes `ls`
+  - Works with most common terminal commands:
+    ```bash
+    # Windows to Unix translation
+    type package.json  ->  cat package.json
+    dir               ->  ls
+    findstr           ->  grep
+
+    # Unix to Windows translation
+    cat package.json  ->  type package.json
+    ls               ->  dir
+    grep             ->  findstr
+    ```
+
+### Supported Command Translations
+
+| Windows Command | Unix Command (MacOS/Linux) | Description |
+|----------------|---------------------------|-------------|
+| type           | cat                      | Display file contents |
+| dir            | ls                       | List directory contents |
+| findstr        | grep                     | Search text patterns |
+| cls            | clear                    | Clear screen |
+| copy           | cp                       | Copy files |
+| move           | mv                       | Move/rename files |
+| del            | rm                       | Delete files |
+| echo           | echo                     | Display messages |
+| tasklist       | ps                       | List processes |
+| taskkill       | kill                    | Terminate processes |
+
+The terminal automatically detects your operating system and translates commands accordingly, providing a seamless experience across different platforms.
 
 ## Screenshots
 
