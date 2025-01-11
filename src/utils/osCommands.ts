@@ -12,6 +12,16 @@ export const commandMap: CommandMapping = {
     'macos': 'cat',
     'linux': 'cat'
   },
+  'fc': {
+    'windows': 'fc', // Retour à fc sans paramètres
+    'macos': 'diff',
+    'linux': 'diff'
+  },
+  'diff': {
+    'windows': 'fc', // Retour à fc sans paramètres
+    'macos': 'diff',
+    'linux': 'diff'
+  },
   'dir': {
     'windows': 'dir',
     'macos': 'ls',
@@ -32,10 +42,15 @@ export const commandMap: CommandMapping = {
     'macos': 'pwd',
     'linux': 'pwd'
   },
-  'mkdir': {
-    'windows': 'mkdir',
-    'macos': 'mkdir',
-    'linux': 'mkdir'
+  'explorer': {
+    'windows': 'explorer',
+    'macos': 'open',
+    'linux': 'open'
+  },
+  'open': {
+    'windows': 'explorer',
+    'macos': 'open',
+    'linux': 'open'
   },
   'del': {
     'windows': 'del',
@@ -82,11 +97,6 @@ export const commandMap: CommandMapping = {
     'macos': 'clear',
     'linux': 'clear'
   },
-  'echo': {
-    'windows': 'echo',
-    'macos': 'echo',
-    'linux': 'echo'
-  },
   'findstr': {
     'windows': 'findstr',
     'macos': 'grep',
@@ -126,6 +136,16 @@ export const commandMap: CommandMapping = {
     'windows': 'taskkill',
     'macos': 'kill',
     'linux': 'kill'
+  },
+  'touch': {
+    'windows': 'echo.>',
+    'macos': 'touch',
+    'linux': 'touch'
+  },
+  'echo.>': {
+    'windows': 'echo.>',
+    'macos': 'touch',
+    'linux': 'touch'
   }
 };
 

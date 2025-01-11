@@ -15,6 +15,9 @@ interface TerminalOutput {
   isLoading?: boolean;  // Ajout d'un flag de chargement par commande
 }
 
+// REGEXT PATH:
+// (?<opening>\b(?<montage>[a-zA-Z]:[\/\\])|[\/\\][\/\\](?<!http:\/\/)(?<!https:\/\/)(?>[?.][\/\\](?:[^\/\\<>:"|?\n\r ]+[\/\\])?(?&montage)?|(?!(?&montage)))|%\w+%[\/\\]?)(?:[^\/\\<>:"|?\n\r ,'][^\/\\<>:"|?\n\r]*(?<![ ,'])[\/\\])*(?:(?=[^\/\\<>:"'|?\n\r;, ])(?:(?:[^\/\\<>:"|?\n\r;, .](?: (?=[\w\-]))?(?:\*(?!= ))?(?!(?&montage)))+)?(?:\.\w+)*)|(?:'(?&opening)(?=.*'\W|.*'$)(?:[^\/\\<>:'"|?\n\r]+(?:'(?=\w))?[\/\\]?)*')|"(?&opening)(?=.*")(?:[^\/\\<>:"|?\n\r]+[\/\\]?)*"
+
 const formatTextWithLinks = (text: string) => {
   const urlRegex = /(https?:\/\/[^\s]+)/g;
   return text.split(urlRegex).map((part, i) => {
@@ -42,12 +45,25 @@ const formatTextWithLinks = (text: string) => {
 const formatCommand = (command: string) => {
   const words = command.split(' ');
   const firstWord = words[0];
-  const restOfCommand = words.slice(1).join(' ');
+  const rest = command.slice(firstWord.length);
   
+  // Modifier le regex pour ne détecter les paramètres que s'ils sont précédés d'un espace
+  const paramRegex = /(\s-[a-zA-Z]+)|("[^"]*")|('[^']*')/g;
+  
+  const formattedRest = rest.replace(paramRegex, match => {
+    if (match.startsWith(' -')) { // Noter l'espace avant le tiret
+      return `<span class="text-yellow-500">${match}</span>`; // Paramètres en jaune
+    }
+    return `<span class="text-[#3b8eea]">${match}</span>`; // Chaînes entre guillemets
+  });
+
   return (
     <>
       <span className="terminal-command-keyword">{firstWord}</span>
-      {restOfCommand && <span className="terminal-command"> {restOfCommand}</span>}
+      <span 
+        className="terminal-command"
+        dangerouslySetInnerHTML={{ __html: formattedRest }}
+      />
     </>
   );
 };
@@ -219,7 +235,7 @@ const Terminal = React.forwardRef((props, ref) => {
     for (const command of commands) {
       if (!command.trim()) continue;
 
-      if (command === 'clear') {
+      if (command === 'clear' || command === 'cls' ) {
         setHistory([]);
         setCommand('');
         continue;
@@ -284,32 +300,121 @@ const Terminal = React.forwardRef((props, ref) => {
   };
 
   const formatOutput = (output: string) => {
-    // Regex pour détecter les URLs
+    // Premier regex pour les URLs
     const urlRegex = /(https?:\/\/[^\s]+)/g;
-    const parts = output.split(urlRegex);
+    
+    // Regex amélioré pour les chemins Windows et Unix
+    const pathRegex = /(?:[a-zA-Z]:)?\\(?:[^\\/:*?"<>|\r\n]+\\)*[^\\/:*?"<>|\r\n]*|(?:\/[^\/\r\n]+)+/g;
+    
+    // Diviser d'abord par les URLs
+    const parts = [];
+    let lastIndex = 0;
+    let match;
 
+    // Trouver toutes les URLs d'abord
+    while ((match = urlRegex.exec(output)) !== null) {
+      // Ajouter le texte avant l'URL
+      if (match.index > lastIndex) {
+        parts.push({
+          type: 'text',
+          content: output.slice(lastIndex, match.index)
+        });
+      }
+      // Ajouter l'URL
+      parts.push({
+        type: 'url',
+        content: match[0]
+      });
+      lastIndex = match.index + match[0].length;
+    }
+
+    // Ajouter le reste du texte
+    if (lastIndex < output.length) {
+      parts.push({
+        type: 'text',
+        content: output.slice(lastIndex)
+      });
+    }
+
+    // Traiter chaque partie pour les chemins système
     return (
       <pre className="whitespace-pre-wrap break-words font-mono">
         {parts.map((part, i) => {
-          if (part.match(urlRegex)) {
+          if (part.type === 'url') {
             return (
               <a
-                key={i}
-                href={part}
+                key={`url-${i}`}
+                href={part.content}
                 className="terminal-link"
                 onClick={(e) => {
                   e.preventDefault();
-                  window.open(part, '_blank', 'noopener,noreferrer');
+                  window.open(part.content, '_blank', 'noopener,noreferrer');
                 }}
               >
-                {part}
+                {part.content}
               </a>
             );
           }
-          return <span key={i}>{parseAnsiColor(part)}</span>;
+
+          // Traiter le texte pour les chemins
+          const pathParts = [];
+          let textLastIndex = 0;
+          let pathMatch;
+
+          while ((pathMatch = pathRegex.exec(part.content)) !== null) {
+            // Ajouter le texte avant le chemin
+            if (pathMatch.index > textLastIndex) {
+              pathParts.push({
+                type: 'text',
+                content: part.content.slice(textLastIndex, pathMatch.index)
+              });
+            }
+            // Ajouter le chemin
+            pathParts.push({
+              type: 'path',
+              content: pathMatch[0]
+            });
+            textLastIndex = pathMatch.index + pathMatch[0].length;
+          }
+
+          // Ajouter le reste du texte
+          if (textLastIndex < part.content.length) {
+            pathParts.push({
+              type: 'text',
+              content: part.content.slice(textLastIndex)
+            });
+          }
+
+          return pathParts.map((pathPart, j) => {
+            if (pathPart.type === 'path') {
+              return (
+                <a
+                  key={`path-${i}-${j}`}
+                  className="terminal-link text-[#3b8eea] hover:underline cursor-pointer"
+                  onClick={() => {
+                    executeCommand(`explorer "${pathPart.content}"`);
+                  }}
+                >
+                  {pathPart.content}
+                </a>
+              );
+            }
+            return <span key={`text-${i}-${j}`}>{parseAnsiColor(pathPart.content)}</span>;
+          });
         })}
       </pre>
     );
+  };
+
+  // Mise à jour de la fonction handleKillTerminal
+  const handleKillTerminal = () => {
+    // Effacer l'historique et la commande en cours
+    setHistory([{
+      command: '',
+      output: '\x1b[31mProcess terminated.\x1b[0m',  // En rouge avec ANSI
+      isLoading: false
+    }]);
+    setCommand('');
   };
 
   if (!isOpen) {
@@ -330,6 +435,9 @@ const Terminal = React.forwardRef((props, ref) => {
       : 'bottom-0 left-0 right-0'
   }`;
 
+  // Modifier le style commun des tooltips dans la partie header et footer
+  const tooltipStyle = "bg-[#252526] text-[#d4d4d4] border border-[#333] shadow-md";
+
   return (
     <div className={terminalClasses}>
       {/* Drag Handle */}
@@ -345,54 +453,95 @@ const Terminal = React.forwardRef((props, ref) => {
           <span className="text-sm font-medium">Terminal</span>
         </div>
         <div className="flex space-x-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6"
-            onClick={() => setHistory([])}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6"
-            onClick={async () => {
-              try {
-                const dirHandle = await (window as any).showDirectoryPicker();
-                const fullPath = getFullPath(dirHandle.name);
-                executeCommand(`cd "${fullPath}"`);
-              } catch (err) {
-                console.error('Erreur lors de la sélection du dossier:', err);
-              }
-            }}
-          >
-            <FolderOpen className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6"
-            onClick={() => setIsMinimized(!isMinimized)}
-          >
-            {isMinimized ? <Plus className="h-4 w-4" /> : <Minus className="h-4 w-4" />}
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6"
-            onClick={() => setIsFullscreen(!isFullscreen)}
-          >
-            <Maximize2 className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6"
-            onClick={() => setIsOpen(false)}
-          >
-            <X className="h-4 w-4" />
-          </Button>
+          <TooltipProvider delayDuration={50}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={handleKillTerminal}  // Modification ici
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top" className={tooltipStyle}>
+                <p>Kill Terminal</p>
+              </TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={async () => {
+                    try {
+                      const dirHandle = await (window as any).showDirectoryPicker();
+                      const fullPath = getFullPath(dirHandle.name);
+                      executeCommand(`cd "${fullPath}"`);
+                    } catch (err) {
+                      console.error('Erreur lors de la sélection du dossier:', err);
+                    }
+                  }}
+                >
+                  <FolderOpen className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top" className={tooltipStyle}>
+                <p>Select folder</p>
+              </TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={() => setIsMinimized(!isMinimized)}
+                >
+                  {isMinimized ? <Plus className="h-4 w-4" /> : <Minus className="h-4 w-4" />}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top" className={tooltipStyle}>
+                <p>{isMinimized ? 'Maximize' : 'Minimize'}</p>
+              </TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={() => setIsFullscreen(!isFullscreen)}
+                >
+                  <Maximize2 className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top" className={tooltipStyle}>
+                <p>Toggle fullscreen</p>
+              </TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={() => setIsOpen(false)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top" className={tooltipStyle}>
+                <p>Close terminal</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
       </div>
 
@@ -445,7 +594,7 @@ const Terminal = React.forwardRef((props, ref) => {
               placeholder="Type a command..."
             />
             <div className="flex space-x-2"> 
-              <TooltipProvider>
+              <TooltipProvider delayDuration={50}>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
@@ -458,7 +607,11 @@ const Terminal = React.forwardRef((props, ref) => {
                       <Eraser className="h-4 w-4" />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>
+                  <TooltipContent 
+                    side="top" 
+                    align="center"
+                    className={`${tooltipStyle} z-50`}
+                  >
                     <p>Clear terminal</p>
                   </TooltipContent>
                 </Tooltip>
@@ -470,13 +623,12 @@ const Terminal = React.forwardRef((props, ref) => {
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 bg-[#323233]"
-                      // onClick={() => executeCommand('help')}
                       onClick={() => executeCommand(['help', 'npm ls', 'about'])}                   
                     >
                       <HelpCircle className="h-4 w-4" />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>
+                  <TooltipContent className={tooltipStyle}>
                     <p>Help</p>
                   </TooltipContent>
                 </Tooltip>
@@ -493,7 +645,7 @@ const Terminal = React.forwardRef((props, ref) => {
                       <Info className="h-4 w-4" />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>
+                  <TooltipContent className={tooltipStyle}>
                     <p>About</p>
                   </TooltipContent>
                 </Tooltip>
