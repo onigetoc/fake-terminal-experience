@@ -2,6 +2,7 @@ import Terminal from "@/components/Terminal/Terminal";
 import { Button } from "@/components/ui/button";
 import { useRef } from "react";
 import { Play, Terminal as TerminalIcon, Globe } from "lucide-react";
+import { terminalConfig } from '@/config/terminalConfig';
 
 const Index = () => {
   const terminalRef = useRef<{
@@ -57,27 +58,27 @@ const Index = () => {
           Or trigger one or multiple commands from everywhere.
         </p>
 
-        <div className="flex gap-2 mb-8">
+        <div className="flex flex-wrap gap-2 mb-8">  {/* Ajout de flex-wrap ici */}
           <Button
             variant="outline"
             onClick={() => handleRunCommand("npm -v")} // Par défaut displayInTerminal = 1
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 border-gray-500"  // Voici la bonne classe Tailwind
           >
             <Play className="h-4 w-4" />
             Run npm -v
           </Button>
           <Button
             variant="outline"
-            onClick={() => handleRunCommand(['help', 'npm ls', 'about'], 0)} // Exécution silencieuse
-            className="flex items-center gap-2"
+            onClick={() => handleRunCommand(['help', 'npm ls', 'about'])} // Exécution silencieuse
+            className="flex items-center gap-2 border-gray-500"  // Voici la bonne classe Tailwind
           >
             <TerminalIcon className="h-4 w-4" />
             Help, npm ls & About
           </Button>
           <Button
             variant="outline"
-            onClick={() => handleRunCommand(['explorer "https://www.google.com/search?q=fake+terminal"'])}
-            className="flex items-center gap-2"
+            onClick={() => handleRunCommand(['open "https://www.google.com/search?q=fake+terminal"'],0)}
+            className="flex items-center gap-2 border-gray-500"  // Voici la bonne classe Tailwind
           >
             <Globe className="h-4 w-4" />
             Open Browser & Google search
@@ -85,7 +86,7 @@ const Index = () => {
           <Button
             variant="outline"
             onClick={() => handleRunCommand(['explorer "https://github.com/onigetoc/fake-terminal-experience"'])}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 border-gray-500"  // Voici la bonne classe Tailwind
           >
             <Globe className="h-4 w-4" />
             Open Github Project in browser
@@ -93,7 +94,7 @@ const Index = () => {
           <Button
             variant="outline"
             onClick={() => handleRunCommand(['tree /f'])}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 border-gray-500"  // Voici la bonne classe Tailwind
           >
             <TerminalIcon className="h-4 w-4" />
             Get folder tree
@@ -101,14 +102,29 @@ const Index = () => {
           <Button
             variant="outline"
             onClick={() => handleRunCommand(['wmic product get name'])}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 border-gray-500"  // Voici la bonne classe Tailwind
           >
             <TerminalIcon className="h-4 w-4" />
             Programs installed on your PC
           </Button>
+          {/* Ajout du bouton de test */}
+          <Button
+            variant="outline"
+            onClick={() => terminalConfig.toggleVisibility()}
+            className="flex items-center gap-2 border-gray-500"  // Voici la bonne classe Tailwind
+          >
+            <TerminalIcon className="h-4 w-4" />
+            Toggle Terminal
+          </Button>
         </div>
       </div>
-      <Terminal ref={terminalRef} />
+      <Terminal 
+        ref={terminalRef}
+        config={{
+          defaultHeight: 320,
+          showTerminal: true  // Ajout de la configuration showTerminal
+        }} 
+      />
     </div>
   );
 };

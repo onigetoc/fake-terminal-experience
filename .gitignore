@@ -12,6 +12,8 @@ dist
 dist-ssr
 *.local
 
+test
+
 # Ignorer tous les fichiers contenant "copy" dans le nom
 *copy*
 *Copy*

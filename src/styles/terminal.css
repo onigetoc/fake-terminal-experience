@@ -36,6 +36,8 @@
 .terminal-scrollbar {
   scrollbar-width: thin;
   scrollbar-color: #666 #1e1e1e;
+  flex: 1;
+  overflow-y: auto;
 }
 
 .terminal-scrollbar::-webkit-scrollbar {
@@ -105,4 +107,39 @@
   align-items: center;
   justify-content: center;
   flex-direction: row !important;
+}
+
+.terminal-window {
+  position: relative;
+  background-color: #1e1e1e;
+  color: #d4d4d4;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid #333;
+}
+
+/* Retrait des styles inutiles pour les boutons du terminal */
+
+.terminal-container {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: #1e1e1e;
+  z-index: 50;
+}
+
+/* Force text color for terminal header */
+.terminal-window .text-sm {
+  color: #d4d4d4 !important;
+}
+
+.fullscreen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
 }

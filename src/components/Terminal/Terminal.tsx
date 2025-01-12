@@ -1,13 +1,14 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { Button } from "@/components/ui/button";
-import { X, Minus, Maximize2, Terminal as TerminalIcon, Trash2, Plus, Loader2, HelpCircle, Eraser, Info, FolderOpen } from 'lucide-react';
+import { X, Minus, Maximize2, Terminal as TerminalIcon, Trash2, Plus, Loader2, HelpCircle, Eraser, Info, FolderOpen, Minimize2 } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
 import '../../styles/terminal.css';
 import { executeRemoteCommand } from '../../services/terminalApi';
-import { isCustomCommand, executeCustomCommand } from '../../services/customCommands';
+// import { isCustomCommand, executeCustomCommand } from '../../services/customCommands';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { getFullPath } from "../../utils/pathUtils";
 import { translateCommand, shouldTranslateCommand } from '../../utils/osCommands';
+import { terminalConfig } from '@/config/terminalConfig';
 
 interface TerminalOutput {
   command: string;
@@ -48,7 +49,11 @@ const formatCommand = (command: string) => {
   const rest = command.slice(firstWord.length);
   
   // Modifier le regex pour ne détecter les paramètres que s'ils sont précédés d'un espace
-  const paramRegex = /(\s-[a-zA-Z]+)|("[^"]*")|('[^']*')/g;
+  // const paramRegex = /(\s-[a-zA-Z]+)|("[^"]*")|('[^']*')/g;
+  // Mon tabarnak de AI, t'es mieux de pas toucher a mes commentaires de regex suivant ou précèdant je t'arrache la tête
+  const paramRegex = /[A-Za-z]:(?:\\|\/)+(?:[^\\/:*?"<>|\r\n]+(?:\\|\/)+)+[^\\/:*?"<>|\r\n'")\]]+/g;  
+
+  
   
   const formattedRest = rest.replace(paramRegex, match => {
     if (match.startsWith(' -')) { // Noter l'espace avant le tiret
@@ -125,13 +130,31 @@ const parseAnsiColor = (text: string) => {
 };
 
 // Modifier l'interface pour inclure displayInTerminal
-const Terminal = React.forwardRef((props, ref) => {
+interface TerminalProps {
+  config?: Partial<TerminalConfig>;
+}
+
+export const Terminal = forwardRef<any, TerminalProps>(({ config: propsConfig }, ref) => {
+  // Modifier l'ordre de fusion pour donner la priorité aux props
+  const mergedConfig = {
+    ...terminalConfig.get(),
+    ...propsConfig  // Les props auront maintenant priorité sur la config globale
+  };
+
+  // Utiliser directement mergedConfig.showTerminal pour l'état initial
+  const [isVisible, setIsVisible] = useState(mergedConfig.showTerminal);
+
+  // États avec valeurs par défaut ou de configuration
   const [isOpen, setIsOpen] = useState(true);
+  const [isFullscreen, setIsFullscreen] = useState(mergedConfig.startFullscreen);
+  const [height, setHeight] = useState(mergedConfig.defaultHeight);
   const [isMinimized, setIsMinimized] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [prompt, setPrompt] = useState(mergedConfig.promptString);
+  const [theme, setTheme] = useState(mergedConfig.theme);
+  
+  // Autres états
   const [command, setCommand] = useState('');
   const [history, setHistory] = useState<TerminalOutput[]>([]);
-  const [height, setHeight] = useState(220);
   const [isDragging, setIsDragging] = useState(false);
   const terminalRef = useRef<HTMLDivElement>(null);
   const dragStartY = useRef<number>(0);
@@ -291,7 +314,7 @@ const Terminal = React.forwardRef((props, ref) => {
   };
 
   // Exposer executeCommand via la ref
-  React.useImperativeHandle(ref, () => ({
+  useImperativeHandle(ref, () => ({
     executeCommand
   }));
 
@@ -305,10 +328,13 @@ const Terminal = React.forwardRef((props, ref) => {
 
   const formatOutput = (output: string) => {
     // Premier regex pour les URLs
-    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    // const urlRegex = /(https?:\/\/[^\s]+)/g;
+    const urlRegex = /https?:\/\/[^\s"')\]]+/g;
     
     // Regex amélioré pour les chemins Windows et Unix
-    const pathRegex = /(?:[a-zA-Z]:)?\\(?:[^\\/:*?"<>|\r\n]+\\)*[^\\/:*?"<>|\r\n]*|(?:\/[^\/\r\n]+)+/g;
+    // const pathRegex = /(?:[a-zA-Z]:)?\\(?:[^\\/:*?"<>|\r\n@]+\\)*[^\\/:*?"<>|\r\n@]*|(?:\/(?!@)[^\/\r\n@]+)+/g;
+    const pathRegex = /[A-Za-z]:\\(?:[^\\/:*?"<>|\r\n]+\\)+[^\\/:*?"<>|\r\n'")]+/g;
+    // const pathRegex = /[A-Za-z]:(?:\\|\/)+(?:[^\\/:*?"<>|\r\n]+(?:\\|\/)+)+[^\\/:*?"<>|\r\n'")\]]+/g;
     
     // Diviser d'abord par les URLs
     const parts = [];
@@ -422,6 +448,26 @@ const Terminal = React.forwardRef((props, ref) => {
     setCommand('');
   };
 
+  // Effet pour suivre les changements de configuration
+  useEffect(() => {
+    const handleConfigChange = () => {
+      const currentConfig = {
+        ...terminalConfig.get(),
+        ...propsConfig // Toujours donner la priorité aux props
+      };
+      setIsVisible(currentConfig.showTerminal);
+    };
+
+    handleConfigChange(); // Appliquer immédiatement
+    const interval = setInterval(handleConfigChange, 100); // Réduire l'intervalle pour une réponse plus rapide
+
+    return () => clearInterval(interval);
+  }, [propsConfig]); // Ajouter propsConfig comme dépendance
+
+  // Si le terminal n'est pas visible, ne rien rendre
+  if (!isVisible) return null;
+
+  // Si le terminal est fermé, afficher le bouton flottant
   if (!isOpen) {
     return (
       <Button
@@ -445,222 +491,233 @@ const Terminal = React.forwardRef((props, ref) => {
 
   return (
     <div className={terminalClasses}>
-      {/* Drag Handle */}
-      <div
-        className="absolute top-0 left-0 right-0 h-1 cursor-ns-resize"
-        onMouseDown={handleMouseDown}
-      />
+      <div 
+        className="terminal-window"
+        style={{
+          height: isFullscreen ? '100vh' : isMinimized ? '40px' : height, // Ajout de la condition pour isMinimized
+          fontSize: `${mergedConfig.fontSize}px`,
+          fontFamily: mergedConfig.fontFamily,
+        }}
+      >
+        {/* Drag Handle */}
+        <div
+          className="absolute top-0 left-0 right-0 h-1 cursor-ns-resize"
+          onMouseDown={handleMouseDown}
+        />
 
-      {/* Terminal Header */}
-      <div className="flex items-center justify-between px-4 py-2 bg-[#252526] border-b border-[#333]">
-        <div className="flex items-center">
-          <TerminalIcon className="w-4 h-4 mr-2" />
-          <span className="text-sm font-medium">Terminal</span>
-        </div>
-        <div className="flex space-x-2">
-          <TooltipProvider delayDuration={50}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={handleKillTerminal}  // Modification ici
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="top" className={tooltipStyle}>
-                <p>Kill Terminal</p>
-              </TooltipContent>
-            </Tooltip>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={async () => {
-                    try {
-                      const dirHandle = await (window as any).showDirectoryPicker();
-                      const fullPath = getFullPath(dirHandle.name);
-                      executeCommand(`cd "${fullPath}"`);
-                    } catch (err) {
-                      console.error('Erreur lors de la sélection du dossier:', err);
-                    }
-                  }}
-                >
-                  <FolderOpen className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="top" className={tooltipStyle}>
-                <p>Select folder</p>
-              </TooltipContent>
-            </Tooltip>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={() => setIsMinimized(!isMinimized)}
-                >
-                  {isMinimized ? <Plus className="h-4 w-4" /> : <Minus className="h-4 w-4" />}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="top" className={tooltipStyle}>
-                <p>{isMinimized ? 'Maximize' : 'Minimize'}</p>
-              </TooltipContent>
-            </Tooltip>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={() => setIsFullscreen(!isFullscreen)}
-                >
-                  <Maximize2 className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="top" className={tooltipStyle}>
-                <p>Toggle fullscreen</p>
-              </TooltipContent>
-            </Tooltip>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={() => setIsOpen(false)}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="top" className={tooltipStyle}>
-                <p>Close terminal</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
-      </div>
-
-      {/* Terminal Content - Only show if not minimized */}
-      {!isMinimized && (
-        <>
-          <div className="p-2 bg-[#252526] border-b border-[#333] text-xs text-gray-400 flex justify-between items-center">
-            <div>Current directory: {currentDirectory || 'Loading...'}</div>
-            <div>User OS: {osInfo}</div>
+        {/* Terminal Header */}
+        <div className="flex items-center justify-between px-4 py-2 bg-[#252526] border-b border-[#333]">
+          <div className="flex items-center">
+            <TerminalIcon className="w-4 h-4 mr-2" />
+            <span className="text-sm font-medium">Terminal</span>
           </div>
-          <div 
-            ref={terminalRef}
-            className={`overflow-y-auto p-4 font-mono text-sm terminal-scrollbar ${
-              isFullscreen 
-                ? 'h-[calc(100vh-40px)]' 
-                : `h-[${height}px]`
-            }`}
-            style={{ height: isFullscreen ? 'calc(100vh - 40px)' : height }}
-          >
-            {history.map((entry, index) => (
-              <div key={index} className="mb-2">
-                <div className="flex items-center">
-                  <span className="terminal-prompt mr-2">&gt;</span>
-                  <div className="terminal-command">
-                    {formatCommand(entry.command)}
+          <div className="flex space-x-2">
+            <TooltipProvider delayDuration={50}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="bg-transparent border-none hover:bg-white/10 text-[#d4d4d4] hover:text-white h-6 w-6"
+                    onClick={handleKillTerminal}  // Modification ici
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className={tooltipStyle}>
+                  <p>Kill Terminal</p>
+                </TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="bg-transparent border-none hover:bg-white/10 text-[#d4d4d4] hover:text-white h-6 w-6"
+                    onClick={async () => {
+                      try {
+                        const dirHandle = await (window as any).showDirectoryPicker();
+                        const fullPath = getFullPath(dirHandle.name);
+                        executeCommand(`cd "${fullPath}"`);
+                      } catch (err) {
+                        console.error('Erreur lors de la sélection du dossier:', err);
+                      }
+                    }}
+                  >
+                    <FolderOpen className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className={tooltipStyle}>
+                  <p>Select folder</p>
+                </TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="bg-transparent border-none hover:bg-white/10 text-[#d4d4d4] hover:text-white h-6 w-6"
+                    onClick={() => setIsMinimized(!isMinimized)}
+                  >
+                    {isMinimized ? <Plus className="h-4 w-4" /> : <Minus className="h-4 w-4" />}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className={tooltipStyle}>
+                  <p>{isMinimized ? 'Maximize' : 'Minimize'}</p>
+                </TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="bg-transparent border-none hover:bg-white/10 text-[#d4d4d4] hover:text-white h-6 w-6"
+                    onClick={() => setIsFullscreen(!isFullscreen)}
+                  >
+                    {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className={tooltipStyle}>
+                  <p>{isFullscreen ? 'Exit fullscreen' : 'Toggle fullscreen'}</p>
+                </TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="bg-transparent border-none hover:bg-white/10 text-[#d4d4d4] hover:text-white h-6 w-6"
+                    onClick={() => setIsOpen(false)}  // Utiliser setIsOpen au lieu de setIsVisible
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className={tooltipStyle}>
+                  <p>Close terminal</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        </div>
+
+        {/* Terminal Content - Only show if not minimized */}
+        {!isMinimized && (
+          <>
+            <div className="p-2 bg-[#252526] border-b border-[#333] text-xs text-gray-400 flex justify-between items-center">
+              <div>Current directory: {currentDirectory || 'Loading...'}</div>
+              <div>User OS: {osInfo}</div>
+            </div>
+            <div 
+              ref={terminalRef}
+              className={`overflow-y-auto p-4 font-mono text-sm terminal-scrollbar ${
+                isFullscreen 
+                  ? 'h-[calc(100vh-40px)]' 
+                  : `h-[${height}px]`
+              }`}
+              style={{ height: isFullscreen ? 'calc(100vh - 40px)' : height }}
+            >
+              {history.map((entry, index) => (
+                <div key={index} className="mb-2">
+                  <div className="flex items-center">
+                    <span className="terminal-prompt mr-2">&gt;</span>
+                    <div className="terminal-command">
+                      {formatCommand(entry.command)}
+                    </div>
+                  </div>
+                  <div className="ml-4 terminal-output">
+                    {entry.isLoading ? (
+                      <div className="flex items-center gap-2 text-gray-400">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>Executing command...</span>
+                      </div>
+                    ) : (
+                      formatOutput(entry.output) 
+                    )}
                   </div>
                 </div>
-                <div className="ml-4 terminal-output">
-                  {entry.isLoading ? (
-                    <div className="flex items-center gap-2 text-gray-400">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      <span>Executing command...</span>
-                    </div>
-                  ) : (
-                    formatOutput(entry.output) 
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Command Input */}
-          <form onSubmit={handleSubmit} className="p-2 border-t border-[#333] flex">
-            <span className="terminal-prompt mr-2 mt-1">&gt;</span>
-            <input
-              type="text"
-              value={command}
-              onChange={(e) => setCommand(e.target.value)}
-              className="flex-1 bg-transparent border-none outline-none terminal-command font-mono"
-              placeholder="Type a command..."
-            />
-            <div className="flex space-x-2"> 
-              <TooltipProvider delayDuration={50}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => executeCommand('clear')}
-                    >
-                      <Eraser className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent 
-                    side="top" 
-                    align="center"
-                    className={`${tooltipStyle} z-50`}
-                  >
-                    <p>Clear terminal</p>
-                  </TooltipContent>
-                </Tooltip>
-
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 bg-[#323233]"
-                      onClick={() => executeCommand(['help', 'npm ls', 'about'])}                   
-                    >
-                      <HelpCircle className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent className={tooltipStyle}>
-                    <p>Help</p>
-                  </TooltipContent>
-                </Tooltip>
-
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 bg-[#323233]"
-                      onClick={() => executeCommand('about')}
-                    >
-                      <Info className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent className={tooltipStyle}>
-                    <p>About</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              ))}
             </div>
-          </form>
-        </>
-      )}
+
+            {/* Command Input */}
+            <form onSubmit={handleSubmit} className="p-2 border-t border-[#333] flex">
+              <span className="terminal-prompt mr-2 mt-1.5">&gt;</span>
+              <input
+                type="text"
+                value={command}
+                onChange={(e) => setCommand(e.target.value)}
+                className="flex-1 bg-transparent border-none outline-none terminal-command font-mono"
+                placeholder="Type a command..."
+              />
+              <div className="flex space-x-2"> 
+                <TooltipProvider delayDuration={50}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 hover:bg-white/10 hover:text-white"
+                        onClick={() => executeCommand('clear')}
+                      >
+                        <Eraser className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent 
+                      side="top" 
+                      align="center"
+                      className={`${tooltipStyle} z-50`}
+                    >
+                      <p>Clear terminal</p>
+                    </TooltipContent>
+                  </Tooltip>
+
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 bg-[#323233] hover:bg-white/10 hover:text-white"  // Ajout des classes de hover
+                        onClick={() => executeCommand('help')}                   
+                        // onClick={() => executeCommand(['help', 'npm ls', 'about'])}                   
+                      >
+                        <HelpCircle className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent className={tooltipStyle}>
+                      <p>Help</p>
+                    </TooltipContent>
+                  </Tooltip>
+
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 bg-[#323233] hover:bg-white/10 hover:text-white"  // Ajout des classes de hover
+                        onClick={() => executeCommand('about')}
+                      >
+                        <Info className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent className={tooltipStyle}>
+                      <p>About</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            </form>
+          </>
+        )}
+      </div>
     </div>
   );
 });
 
+Terminal.displayName = 'Terminal';
 export default Terminal;

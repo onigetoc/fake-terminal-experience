@@ -1,7 +1,8 @@
-import path from 'path-browserify';
+// import path from 'path-browserify';
 
 // Chemin de base simulé
-const BASE_PATH = 'C:\\Users\\LENOVO\\';
+// const BASE_PATH = 'C:\\Users\\LENOVO\\';
+const BASE_PATH = '';
 
 /**
  * Normalise un chemin en utilisant des forward slashes

@@ -2,7 +2,17 @@ const CUSTOM_COMMANDS = {
   help: () => `Available commands:
   help    - Show this help message
   about   - About this terminal
-  clear   - Clear terminal screen`,
+  clear   - Clear terminal screen
+  
+  execute command from backend:
+  executeCommand('help')}
+  executeCommand(['help', 'npm ls', 'about'])}
+
+  execute command from frontend:
+  handleRunCommand('help')}
+  handleRunCommand(['help', 'npm ls', 'about'])}
+  
+  Documentation: https://github.com/onigetoc/fake-terminal-experience`,
 
   about: () => 
 `Terminal Emulator v1.0
