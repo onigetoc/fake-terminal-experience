@@ -4,11 +4,13 @@ import { useRef } from "react";
 import { Play, Terminal as TerminalIcon, Globe } from "lucide-react";
 
 const Index = () => {
-  const terminalRef = useRef<any>(null);
+  const terminalRef = useRef<{
+    executeCommand: (cmd: string | string[], displayInTerminal?: number) => void;
+  }>(null);
 
-  const handleRunCommand = (command: string | string[]) => {
+  const handleRunCommand = (command: string | string[], displayInTerminal: number = 1) => {
     if (terminalRef.current) {
-      terminalRef.current.executeCommand(command);
+      terminalRef.current.executeCommand(command, displayInTerminal);
     }
   };
 
@@ -21,7 +23,7 @@ const Index = () => {
         </p>
 
         <p className="text-lg text-muted-foreground mb-2">
-          Launch terminal commands from anywhere in your app using:
+          Launch terminal commands from anywhere (fronend) in your app using:
         </p>
 
         <p>start C:\Users\LENOVO\Videos\Advanced-Promp-Generator-v3</p>
@@ -52,7 +54,7 @@ const Index = () => {
         <div className="flex gap-2 mb-8">
           <Button
             variant="outline"
-            onClick={() => handleRunCommand("npm -v")}
+            onClick={() => handleRunCommand("npm -v")} // Par défaut displayInTerminal = 1
             className="flex items-center gap-2"
           >
             <Play className="h-4 w-4" />
@@ -60,7 +62,7 @@ const Index = () => {
           </Button>
           <Button
             variant="outline"
-            onClick={() => handleRunCommand(['help', 'npm ls', 'about'])}
+            onClick={() => handleRunCommand(['help', 'npm ls', 'about'], 0)} // Exécution silencieuse
             className="flex items-center gap-2"
           >
             <TerminalIcon className="h-4 w-4" />

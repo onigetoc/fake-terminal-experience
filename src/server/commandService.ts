@@ -67,7 +67,16 @@ async function executeWindowsCommand(command: string): Promise<CommandResult> {
         stderr = Buffer.concat([stderr, data]);
       });
 
-      child.on('close', () => {
+      child.on('error', (err) => {
+        // Ajouter l'erreur au stderr pour qu'elle soit renvoyée
+        stderr = Buffer.concat([stderr, Buffer.from(err.message, 'utf8')]);
+      });
+
+      child.on('close', (code) => {
+        // Si code != 0, ajouter un message d'erreur supplémentaire
+        if (code !== 0 && stderr.length === 0) {
+          stderr = Buffer.from(`Process exited with code ${code}\n`, 'utf8');
+        }
         resolve({
           stdout: iconv.decode(stdout, 'cp437'),
           stderr: iconv.decode(stderr, 'cp437'),
@@ -107,7 +116,26 @@ async function executeWindowsCommand(command: string): Promise<CommandResult> {
       stderr = Buffer.concat([stderr, data]);
     });
 
-    child.on('close', () => {
+    child.on('error', (err) => {
+      // Ajouter l'erreur au stderr pour qu'elle soit renvoyée
+      stderr = Buffer.concat([stderr, Buffer.from(err.message, 'utf8')]);
+    });
+
+    child.on('close', (code) => {
+      // Forcer code=0 s’il s’agit d’explorer avec un lien
+      if (command.toLowerCase().includes('explorer') && command.match(/https?:\/\//i)) {
+        code = 0;
+      }
+
+      // Forcer code=0 si "explorer" renvoie une erreur en ouvrant un lien
+      if (command.toLowerCase().includes('explorer') && command.match(/https?:\/\//i)) {
+        code = 0;
+      }
+
+      // Si code != 0, ajouter un message d'erreur supplémentaire
+      if (code !== 0 && stderr.length === 0) {
+        stderr = Buffer.from(`Process exited with code ${code}\n`, 'utf8');
+      }
       // Détecter si la commande nécessite un encodage spécial
       const baseCommand = command.split(' ')[0].toLowerCase();
       const encoding = specialEncodingCommands[baseCommand] ? 'cp437' : 'utf8';
@@ -177,6 +205,58 @@ export async function executeCommand(command: string): Promise<CommandResult> {
           newCwd: currentWorkingDirectory
         };
       }
+    }
+
+    // Ajouter un bloc spécial pour la commande "start"
+    if (isWindows && cmd.toLowerCase().startsWith('start ')) {
+      const toOpen = cmd.slice(5).trim();
+      const specialSetup = [
+        'powershell.exe',
+        '-NoProfile',
+        '-ExecutionPolicy',
+        'Bypass',
+        '-Command',
+        `[Console]::OutputEncoding=[System.Text.Encoding]::UTF8; Start-Process "${toOpen}" -Wait`
+      ];
+
+      return new Promise((resolve) => {
+        const child = spawn(specialSetup[0], specialSetup.slice(1), {
+          shell: false,
+          windowsHide: true,
+          cwd: currentWorkingDirectory,
+          env: {
+            ...process.env,
+            LANG: `${getSystemLocale()}.UTF-8`,
+            LC_ALL: `${getSystemLocale()}.UTF-8`,
+          },
+        });
+
+        let stdout = Buffer.from([]);
+        let stderr = Buffer.from([]);
+
+        child.stdout.on('data', (data) => {
+          stdout = Buffer.concat([stdout, data]);
+        });
+
+        child.stderr.on('data', (data) => {
+          stderr = Buffer.concat([stderr, data]);
+        });
+
+        child.on('error', (err) => {
+          stderr = Buffer.concat([stderr, Buffer.from(err.message, 'utf8')]);
+        });
+
+        child.on('close', (code) => {
+          if (code !== 0 && stderr.length === 0) {
+            stderr = Buffer.from(`Process exited with code ${code}\n`, 'utf8');
+          }
+          resolve({
+            stdout: iconv.decode(stdout, 'utf8'),
+            stderr: iconv.decode(stderr, 'utf8'),
+            newCwd: currentWorkingDirectory
+          });
+        });
+      });
     }
 
     // Pour Windows, traiter différemment selon la commande

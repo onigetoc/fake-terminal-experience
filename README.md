@@ -82,7 +82,6 @@ npm install
 npm run dev
 ```
 
-
 ## How to use in your own project
 
 To use the Fake Terminal Experience in your project, follow these steps:
@@ -161,6 +160,34 @@ The terminal supports the following commands:
 - `node -v` - Show Node.js version
 - `npm run dev` - Start development server
 - Use up/down arrows to navigate command history
+
+### Displaying Commands in the Terminal
+
+You can choose whether to display a command in the terminal or not by using the `displayInTerminal` argument.
+
+#### Backend
+
+```javascript
+// Display the command in the terminal (default)
+executeCommand("npm -v");
+// or
+executeCommand("npm -v", 1);
+
+// Do not display the command in the terminal
+executeCommand("npm -v", 0);
+```
+
+#### Frontend
+
+```javascript
+// Display the command in the terminal (default)
+handleRunCommand("npm -v");
+// or
+handleRunCommand("npm -v", 1);
+
+// Do not display the command in the terminal
+handleRunCommand("npm -v", 0);
+```
 
 ## Configuration
 

@@ -124,6 +124,7 @@ const parseAnsiColor = (text: string) => {
   return parts;
 };
 
+// Modifier l'interface pour inclure displayInTerminal
 const Terminal = React.forwardRef((props, ref) => {
   const [isOpen, setIsOpen] = useState(true);
   const [isMinimized, setIsMinimized] = useState(false);
@@ -229,7 +230,7 @@ const Terminal = React.forwardRef((props, ref) => {
     }
   };
 
-  const executeCommand = async (cmd: string | string[]) => {
+  const executeCommand = async (cmd: string | string[], displayInTerminal: number = 1) => {
     const commands = Array.isArray(cmd) ? cmd : [cmd];
 
     for (const command of commands) {
@@ -241,11 +242,12 @@ const Terminal = React.forwardRef((props, ref) => {
         continue;
       }
 
-      // Ajouter la commande à l'historique avec isLoading=true
-      setHistory(prev => [...prev, { command, output: '', isLoading: true }]);
+      // N'ajouter à l'historique que si displayInTerminal est 1
+      if (displayInTerminal === 1) {
+        setHistory(prev => [...prev, { command, output: '', isLoading: true }]);
+      }
 
       try {
-        // Ajouter un timeout de 30 secondes
         const timeoutPromise = new Promise((_, reject) => {
           setTimeout(() => reject(new Error('Command execution timeout')), 60000);
         });
@@ -253,35 +255,37 @@ const Terminal = React.forwardRef((props, ref) => {
         const outputPromise = simulateCommand(command);
         const output = await Promise.race([outputPromise, timeoutPromise]);
 
-        setHistory(prev => {
-          const newHistory = [...prev];
-          const lastEntry = newHistory[newHistory.length - 1];
-          if (lastEntry && lastEntry.command === command) {
-            lastEntry.output = String(output);
-            lastEntry.isLoading = false;
-          }
-          return newHistory;
-        });
+        if (displayInTerminal === 1) {
+          setHistory(prev => {
+            const newHistory = [...prev];
+            const lastEntry = newHistory[newHistory.length - 1];
+            if (lastEntry && lastEntry.command === command) {
+              lastEntry.output = String(output);
+              lastEntry.isLoading = false;
+            }
+            return newHistory;
+          });
+        }
       } catch (error) {
         console.error('Error executing command:', error);
         
-        // S'assurer que l'état isLoading est mis à false même en cas d'erreur
-        setHistory(prev => {
-          const newHistory = [...prev];
-          const lastEntry = newHistory[newHistory.length - 1];
-          if (lastEntry && lastEntry.command === command) {
-            lastEntry.output = `Error: ${error instanceof Error ? error.message : 'Unknown error occurred'}`;
-            lastEntry.isLoading = false;
-          }
-          return newHistory;
-        });
+        if (displayInTerminal === 1) {
+          setHistory(prev => {
+            const newHistory = [...prev];
+            const lastEntry = newHistory[newHistory.length - 1];
+            if (lastEntry && lastEntry.command === command) {
+              lastEntry.output = `Error: ${error instanceof Error ? error.message : 'Unknown error occurred'}`;
+              lastEntry.isLoading = false;
+            }
+            return newHistory;
+          });
 
-        // Optionnellement afficher un toast d'erreur
-        toast({
-          variant: "destructive",
-          title: "Command Error",
-          description: error instanceof Error ? error.message : 'Unknown error occurred',
-        });
+          toast({
+            variant: "destructive",
+            title: "Command Error",
+            description: error instanceof Error ? error.message : 'Unknown error occurred',
+          });
+        }
       }
     }
   };
@@ -392,7 +396,8 @@ const Terminal = React.forwardRef((props, ref) => {
                   key={`path-${i}-${j}`}
                   className="terminal-link text-[#3b8eea] hover:underline cursor-pointer"
                   onClick={() => {
-                    executeCommand(`explorer "${pathPart.content}"`);
+                    // Exécuter la commande "explorer <chemin>" sans l'afficher dans le terminal
+                    executeCommand(`explorer "${pathPart.content}"`, 0);
                   }}
                 >
                   {pathPart.content}
