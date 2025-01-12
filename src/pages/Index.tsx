@@ -29,6 +29,7 @@ const Index = () => {
         <p>start C:\Users\LENOVO\Videos\Advanced-Promp-Generator-v3</p>
         
         <pre className="bg-[#1e1e1e] text-[#d4d4d4] p-4 rounded-md mb-4 font-mono text-sm">
+          <span className="text-[#888888]">// Frontend example</span>{'\n'}
           <span className="text-[#888888]">// Single command</span>{'\n'}
           <span className="text-[#DCDCAA]">handleRunCommand</span>
           <span className="text-[#D4D4D4]">(</span>
@@ -44,6 +45,11 @@ const Index = () => {
           <span className="text-[#D4D4D4]">, </span>
           <span className="text-[#CE9178]">"node -v"</span>
           <span className="text-[#D4D4D4]">]</span>
+          <span className="text-[#D4D4D4]">);</span>{'\n\n'}
+          <span className="text-[#888888]">// Backend example</span>{'\n'}
+          <span className="text-[#DCDCAA]">executeCommand</span>
+          <span className="text-[#D4D4D4]">(</span>
+          <span className="text-[#CE9178]">"npm -v"</span>
           <span className="text-[#D4D4D4]">);</span>
         </pre>
 
