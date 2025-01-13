@@ -5,10 +5,11 @@ import { useToast } from "@/components/ui/use-toast";
 import '../../styles/terminal.css';
 import { executeRemoteCommand } from '../../services/terminalApi';
 // import { isCustomCommand, executeCustomCommand } from '../../services/customCommands';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { getFullPath } from "../../utils/pathUtils";
+// import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+// import { getFullPath } from "../../utils/pathUtils";
 import { translateCommand, shouldTranslateCommand } from '../../utils/osCommands';
 import { terminalConfig } from '@/config/terminalConfig';
+import { TerminalUI } from './TerminalUI';
 
 interface TerminalOutput {
   command: string;
@@ -49,9 +50,9 @@ const formatCommand = (command: string) => {
   const rest = command.slice(firstWord.length);
   
   // Modifier le regex pour ne détecter les paramètres que s'ils sont précédés d'un espace
-  // const paramRegex = /(\s-[a-zA-Z]+)|("[^"]*")|('[^']*')/g;
+  const paramRegex = /(\s-[a-zA-Z]+)|("[^"]*")|('[^']*')/g;
   // Mon tabarnak de AI, t'es mieux de pas toucher a mes commentaires de regex suivant ou précèdant je t'arrache la tête
-  const paramRegex = /[A-Za-z]:(?:\\|\/)+(?:[^\\/:*?"<>|\r\n]+(?:\\|\/)+)+[^\\/:*?"<>|\r\n'")\]]+/g;  
+  // const paramRegex = /[A-Za-z]:(?:\\|\/)+(?:[^\\/:*?"<>|\r\n]+(?:\\|\/)+)+[^\\/:*?"<>|\r\n'")\]]+/g;  
 
   
   
@@ -135,23 +136,26 @@ interface TerminalProps {
 }
 
 export const Terminal = forwardRef<any, TerminalProps>(({ config: propsConfig }, ref) => {
-  // Modifier l'ordre de fusion pour donner la priorité aux props
   const mergedConfig = {
     ...terminalConfig.get(),
-    ...propsConfig  // Les props auront maintenant priorité sur la config globale
+    ...propsConfig
   };
 
-  // Utiliser directement mergedConfig.showTerminal pour l'état initial
-  const [isVisible, setIsVisible] = useState(mergedConfig.showTerminal);
+  // États initiaux basés sur initialState
+  const [isVisible, setIsVisible] = useState(mergedConfig.initialState !== 'hidden');
+  const [isOpen, setIsOpen] = useState(mergedConfig.initialState === 'open');
 
-  // États avec valeurs par défaut ou de configuration
-  const [isOpen, setIsOpen] = useState(true);
+  // Utiliser directement mergedConfig pour les états initiaux
   const [isFullscreen, setIsFullscreen] = useState(mergedConfig.startFullscreen);
   const [height, setHeight] = useState(mergedConfig.defaultHeight);
-  const [isMinimized, setIsMinimized] = useState(false);
-  const [prompt, setPrompt] = useState(mergedConfig.promptString);
-  const [theme, setTheme] = useState(mergedConfig.theme);
-  
+  const [isMinimized, setIsMinimized] = useState(mergedConfig.startMinimized);
+
+  // Ajouter un effet pour synchroniser les changements de configuration
+  useEffect(() => {
+    setHeight(mergedConfig.defaultHeight);
+    setIsMinimized(mergedConfig.startMinimized);
+  }, [mergedConfig.defaultHeight, mergedConfig.startMinimized]);
+
   // Autres états
   const [command, setCommand] = useState('');
   const [history, setHistory] = useState<TerminalOutput[]>([]);
@@ -464,11 +468,12 @@ export const Terminal = forwardRef<any, TerminalProps>(({ config: propsConfig },
     return () => clearInterval(interval);
   }, [propsConfig]); // Ajouter propsConfig comme dépendance
 
-  // Si le terminal n'est pas visible, ne rien rendre
+  // Si le terminal n'est pas visible du tout (mode caché)
   if (!isVisible) return null;
 
-  // Si le terminal est fermé, afficher le bouton flottant
-  if (!isOpen) {
+  // Modifier cette condition pour montrer le bouton flottant
+  // quand le terminal est fermé ET que initialState n'est pas 'hidden'
+  if (!isOpen && mergedConfig.initialState !== 'hidden') {
     return (
       <Button
         className="fixed bottom-4 right-4 bg-[#1e1e1e] text-white floating-button"
@@ -480,242 +485,34 @@ export const Terminal = forwardRef<any, TerminalProps>(({ config: propsConfig },
     );
   }
 
-  const terminalClasses = `fixed bg-[#1e1e1e] text-[#d4d4d4] border-t border-[#333] shadow-lg transition-all duration-200 ${
-    isFullscreen 
-      ? 'top-0 left-0 right-0 bottom-0 z-50' 
-      : 'bottom-0 left-0 right-0'
-  }`;
+  // Si le terminal est fermé et showFloatingButton est false, ne rien rendre
+  if (!isOpen) return null;
 
-  // Modifier le style commun des tooltips dans la partie header et footer
-  const tooltipStyle = "bg-[#252526] text-[#d4d4d4] border border-[#333] shadow-md";
-
+  // Rendu : remplacer l'énorme bloc UI par le composant TerminalUI
   return (
-    <div className={terminalClasses}>
-      <div 
-        className="terminal-window"
-        style={{
-          height: isFullscreen ? '100vh' : isMinimized ? '40px' : height, // Ajout de la condition pour isMinimized
-          fontSize: `${mergedConfig.fontSize}px`,
-          fontFamily: mergedConfig.fontFamily,
-        }}
-      >
-        {/* Drag Handle */}
-        <div
-          className="absolute top-0 left-0 right-0 h-1 cursor-ns-resize"
-          onMouseDown={handleMouseDown}
-        />
-
-        {/* Terminal Header */}
-        <div className="flex items-center justify-between px-4 py-2 bg-[#252526] border-b border-[#333]">
-          <div className="flex items-center">
-            <TerminalIcon className="w-4 h-4 mr-2" />
-            <span className="text-sm font-medium">Terminal</span>
-          </div>
-          <div className="flex space-x-2">
-            <TooltipProvider delayDuration={50}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="bg-transparent border-none hover:bg-white/10 text-[#d4d4d4] hover:text-white h-6 w-6"
-                    onClick={handleKillTerminal}  // Modification ici
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="top" className={tooltipStyle}>
-                  <p>Kill Terminal</p>
-                </TooltipContent>
-              </Tooltip>
-
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="bg-transparent border-none hover:bg-white/10 text-[#d4d4d4] hover:text-white h-6 w-6"
-                    onClick={async () => {
-                      try {
-                        const dirHandle = await (window as any).showDirectoryPicker();
-                        const fullPath = getFullPath(dirHandle.name);
-                        executeCommand(`cd "${fullPath}"`);
-                      } catch (err) {
-                        console.error('Erreur lors de la sélection du dossier:', err);
-                      }
-                    }}
-                  >
-                    <FolderOpen className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="top" className={tooltipStyle}>
-                  <p>Select folder</p>
-                </TooltipContent>
-              </Tooltip>
-
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="bg-transparent border-none hover:bg-white/10 text-[#d4d4d4] hover:text-white h-6 w-6"
-                    onClick={() => setIsMinimized(!isMinimized)}
-                  >
-                    {isMinimized ? <Plus className="h-4 w-4" /> : <Minus className="h-4 w-4" />}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="top" className={tooltipStyle}>
-                  <p>{isMinimized ? 'Maximize' : 'Minimize'}</p>
-                </TooltipContent>
-              </Tooltip>
-
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="bg-transparent border-none hover:bg-white/10 text-[#d4d4d4] hover:text-white h-6 w-6"
-                    onClick={() => setIsFullscreen(!isFullscreen)}
-                  >
-                    {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="top" className={tooltipStyle}>
-                  <p>{isFullscreen ? 'Exit fullscreen' : 'Toggle fullscreen'}</p>
-                </TooltipContent>
-              </Tooltip>
-
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="bg-transparent border-none hover:bg-white/10 text-[#d4d4d4] hover:text-white h-6 w-6"
-                    onClick={() => setIsOpen(false)}  // Utiliser setIsOpen au lieu de setIsVisible
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="top" className={tooltipStyle}>
-                  <p>Close terminal</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-        </div>
-
-        {/* Terminal Content - Only show if not minimized */}
-        {!isMinimized && (
-          <>
-            <div className="p-2 bg-[#252526] border-b border-[#333] text-xs text-gray-400 flex justify-between items-center">
-              <div>Current directory: {currentDirectory || 'Loading...'}</div>
-              <div>User OS: {osInfo}</div>
-            </div>
-            <div 
-              ref={terminalRef}
-              className={`overflow-y-auto p-4 font-mono text-sm terminal-scrollbar ${
-                isFullscreen 
-                  ? 'h-[calc(100vh-40px)]' 
-                  : `h-[${height}px]`
-              }`}
-              style={{ height: isFullscreen ? 'calc(100vh - 40px)' : height }}
-            >
-              {history.map((entry, index) => (
-                <div key={index} className="mb-2">
-                  <div className="flex items-center">
-                    <span className="terminal-prompt mr-2">&gt;</span>
-                    <div className="terminal-command">
-                      {formatCommand(entry.command)}
-                    </div>
-                  </div>
-                  <div className="ml-4 terminal-output">
-                    {entry.isLoading ? (
-                      <div className="flex items-center gap-2 text-gray-400">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        <span>Executing command...</span>
-                      </div>
-                    ) : (
-                      formatOutput(entry.output) 
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Command Input */}
-            <form onSubmit={handleSubmit} className="p-2 border-t border-[#333] flex">
-              <span className="terminal-prompt mr-2 mt-1.5">&gt;</span>
-              <input
-                type="text"
-                value={command}
-                onChange={(e) => setCommand(e.target.value)}
-                className="flex-1 bg-transparent border-none outline-none terminal-command font-mono"
-                placeholder="Type a command..."
-              />
-              <div className="flex space-x-2"> 
-                <TooltipProvider delayDuration={50}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 hover:bg-white/10 hover:text-white"
-                        onClick={() => executeCommand('clear')}
-                      >
-                        <Eraser className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent 
-                      side="top" 
-                      align="center"
-                      className={`${tooltipStyle} z-50`}
-                    >
-                      <p>Clear terminal</p>
-                    </TooltipContent>
-                  </Tooltip>
-
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 bg-[#323233] hover:bg-white/10 hover:text-white"  // Ajout des classes de hover
-                        onClick={() => executeCommand('help')}                   
-                        // onClick={() => executeCommand(['help', 'npm ls', 'about'])}                   
-                      >
-                        <HelpCircle className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent className={tooltipStyle}>
-                      <p>Help</p>
-                    </TooltipContent>
-                  </Tooltip>
-
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 bg-[#323233] hover:bg-white/10 hover:text-white"  // Ajout des classes de hover
-                        onClick={() => executeCommand('about')}
-                      >
-                        <Info className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent className={tooltipStyle}>
-                      <p>About</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-            </form>
-          </>
-        )}
-      </div>
-    </div>
+    <TerminalUI
+      isOpen={isOpen}
+      isFullscreen={isFullscreen}
+      isMinimized={isMinimized}
+      height={height}
+      isDragging={isDragging}
+      currentDirectory={currentDirectory}
+      osInfo={osInfo}
+      history={history}
+      command={command}
+      terminalRef={terminalRef}
+      handleMouseDown={handleMouseDown}
+      handleKillTerminal={handleKillTerminal}
+      setIsOpen={setIsOpen}
+      setIsMinimized={setIsMinimized}
+      setIsFullscreen={setIsFullscreen}
+      handleSubmit={handleSubmit}
+      setCommand={setCommand}
+      executeCommand={executeCommand}
+      mergedConfig={mergedConfig}
+      formatCommand={formatCommand} // Passer la fonction formatCommand
+      formatOutput={formatOutput} // Passer la fonction formatOutput
+    />
   );
 });
 

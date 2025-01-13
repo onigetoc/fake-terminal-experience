@@ -21,8 +21,12 @@ Create a React-based terminal emulator that provides a realistic command-line in
 - Use descriptive variable names with auxiliary verbs
 
 ## Tech Stack
+- Vite
 - React
-- JavaScript
+- Vitest
+- Tailwind CSS
+- typescript
+- React Lucide
 - HTML/CSS
 - CSS Framework (e.g., Tailwind CSS)
 
@@ -100,4 +104,4 @@ Rules:
 - Follow semantic versioning for releases
 - Maintain changelog
 
-To ensure a seamless development experience, consider creating a `.cursorrules` or `.github/copilot-instructions.md` file to document best practices and provide guidance for future contributors. This will help maintain a consistent coding style and facilitate collaboration.
+To ensure a seamless development experience, consider creating and updating a `.cursorrules`, `.windsurfrules` or `.github/copilot-instructions.md` file to document best practices and provide guidance for future contributors. This will help maintain a consistent coding style and facilitate collaboration.

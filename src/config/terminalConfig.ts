@@ -1,80 +1,69 @@
 // Terminal configuration type
 export type TerminalConfig = {
-  // UI Options
-  showTerminal: boolean;
+  initialState: 'open' | 'closed' | 'hidden';  // Remplace showTerminal et startClosed
   startFullscreen: boolean;
   defaultHeight: number;
-  defaultWidth: number;
   minHeight: number;
   minWidth: number;
-  
-  // Behavior
   showExecutedCommands: boolean;
   keepCommandHistory: boolean;
   maxHistoryLength: number;
-  
-  // Appearance
   theme: 'dark' | 'light' | 'system';
   fontSize: number;
   fontFamily: string;
-  
-  // Terminal
   promptString: string;
   showPath: boolean;
-  
-  // Performance
   maxOutputLength: number;
   scrollbackLimit: number;
+  startMinimized: boolean;  // Ajout de la nouvelle option
+  showFloatingButton: boolean;  // Nouvelle option
+  readOnlyMode: boolean;  // Nouvelle option
 };
 
-// Default configuration
 export const defaultConfig: TerminalConfig = {
-  showTerminal: true,
-  startFullscreen: false,
-  defaultHeight: 320,
-  minHeight: 200,
-  minWidth: 400,
-  showExecutedCommands: true,
-  keepCommandHistory: true,
-  maxHistoryLength: 100,
-  theme: 'dark',
-  fontSize: 14,
-  fontFamily: 'monospace',
-  promptString: '$ ',
-  showPath: true,
-  maxOutputLength: 1000,
-  scrollbackLimit: 1000,
+    initialState: 'open',  // open by default. OPTIONS: 'open' | 'closed' | 'hidden'
+    readOnlyMode: false,    // Par défaut, terminal interactif complet
+    startFullscreen: false,
+    showFloatingButton: true,  // Par défaut, on montre le bouton flottant
+    startMinimized: false,    // Valeur par défaut globale
+    defaultHeight: 320,
+    minHeight: 200,
+    showExecutedCommands: true,
+    keepCommandHistory: true,
+    maxHistoryLength: 100,
+    theme: 'dark',
+    fontSize: 14,
+    fontFamily: 'monospace',
+    promptString: '$ ',
+    showPath: true,
+    maxOutputLength: 1000,
+    scrollbackLimit: 1000,
 };
-
-// Global configuration instance
-let currentConfig: TerminalConfig = { ...defaultConfig };
 
 // Configuration utility
 export const terminalConfig = {
-  // Get current config
-  get: () => currentConfig,
+  private: {
+    current: { ...defaultConfig }
+  },
   
-  // Update config
+  get: () => terminalConfig.private.current,
+  
   set: (newConfig: Partial<TerminalConfig>) => {
-    currentConfig = {
-      ...currentConfig,
+    terminalConfig.private.current = {
+      ...terminalConfig.private.current,
       ...newConfig
     };
-    return currentConfig;
+    return terminalConfig.private.current;
   },
   
-  // Reset to defaults
   reset: () => {
-    currentConfig = { ...defaultConfig };
-    return currentConfig;
+    terminalConfig.private.current = { ...defaultConfig };
+    return terminalConfig.private.current;
   },
-  
-  // Nouvelle méthode pour contrôler la visibilité
+
   toggleVisibility: (show?: boolean) => {
-    currentConfig = {
-      ...currentConfig,
-      showTerminal: show !== undefined ? show : !currentConfig.showTerminal
-    };
-    return currentConfig;
+    terminalConfig.private.current.showTerminal = 
+      show ?? !terminalConfig.private.current.showTerminal;
+    return terminalConfig.private.current;
   }
 };

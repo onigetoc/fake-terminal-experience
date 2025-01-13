@@ -11,12 +11,13 @@ const queryClient = new QueryClient();
 
 const App = () => {
   useEffect(() => {
-    // Configuration initiale minimale
+    // Configuration globale
     terminalConfig.set({
-      showTerminal: true,  // Ajout de l'option showTerminal
-      defaultHeight: 400,
-      fontSize: 14,
-      promptString: '$ '
+      showTerminal: true,
+      readOnlyMode: false,
+      fontSize: 14,        // Configuration globale du fontSize
+      promptString: '$ ',
+      // Nous ne définissons pas startMinimized ici, utilisons la valeur par défaut
     });
   }, []);
 
