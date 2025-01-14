@@ -4,13 +4,9 @@ const CUSTOM_COMMANDS = {
   about   - About this terminal
   clear   - Clear terminal screen
   
-  execute command from backend:
+  executing command:
   executeCommand('help')}
   executeCommand(['help', 'npm ls', 'about'])}
-
-  execute command from frontend:
-  handleRunCommand('help')}
-  handleRunCommand(['help', 'npm ls', 'about'])}
   
   Documentation: https://github.com/onigetoc/fake-terminal-experience`,
 

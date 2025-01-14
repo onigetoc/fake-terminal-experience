@@ -4,6 +4,7 @@ import {
   Trash2, FolderOpen, Plus, Minus, Maximize2, Minimize2, X, Terminal as TerminalIcon,
   Loader2, Eraser, HelpCircle, Info
 } from 'lucide-react';
+import TerminalSearch from './terminalAddons.tsx';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface TerminalUIProps {
@@ -33,6 +34,40 @@ interface TerminalUIProps {
 
 // On reçoit en props tout ce qui est nécessaire pour l’UI (états, handlers, etc.)
 export function TerminalUI(props: TerminalUIProps) {
+  const [isTerminalFocused, setIsTerminalFocused] = React.useState(false);
+
+  // Add click outside handler
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const terminalContainer = document.querySelector('.terminal-container');
+      if (terminalContainer && !terminalContainer.contains(event.target as Node)) {
+        setIsTerminalFocused(false);
+        // Set tabIndex to -1 when clicking outside
+        terminalContainer.setAttribute('tabindex', '-1');
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  const handleFocus = React.useCallback(() => {
+    setIsTerminalFocused(true);
+    // Set tabIndex to 0 when focused
+    const terminalContainer = document.querySelector('.terminal-container');
+    if (terminalContainer) {
+      terminalContainer.setAttribute('tabindex', '0');
+    }
+  }, []);
+
+  const handleBlur = React.useCallback((e: React.FocusEvent) => {
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setIsTerminalFocused(false);
+    }
+  }, []);
+
   const tooltipStyle = "bg-[#252526] text-[#d4d4d4] border border-[#333] shadow-md";
 
   if (!props.isOpen) {
@@ -54,8 +89,22 @@ export function TerminalUI(props: TerminalUIProps) {
   }`;
 
   return (
-    <div className={terminalClasses}>
-      <div 
+    <div 
+      className={`terminal-container ${terminalClasses}`}
+      tabIndex={isTerminalFocused ? 0 : -1}
+      onFocus={handleFocus}
+      onBlur={handleBlur}
+      onMouseDown={() => {
+        setIsTerminalFocused(true);
+        // Set tabIndex to 0 when clicked
+        const terminalContainer = document.querySelector('.terminal-container');
+        if (terminalContainer) {
+          terminalContainer.setAttribute('tabindex', '0');
+        }
+      }}
+    >
+      <TerminalSearch isTerminalFocused={isTerminalFocused} />
+      <div
         className="terminal-window"
         style={{
           height: props.isFullscreen ? '100vh' : props.isMinimized ? '40px' : props.height,
@@ -105,9 +154,13 @@ export function TerminalUI(props: TerminalUIProps) {
                       className="pt-0.5 bg-transparent border-none hover:bg-white/10 text-[#d4d4d4] hover:text-white h-6 w-6"
                       onClick={async () => {
                         try {
-                          const dirHandle = await window.showDirectoryPicker();
-                          // Utiliser directement le nom du dossier sans guillemets
-                          props.executeCommand(`cd ${dirHandle.name}`, 1);
+                          // Vérifier si l'API est disponible
+                          if ('showDirectoryPicker' in window) {
+                            const dirHandle = await (window as any).showDirectoryPicker();
+                            props.executeCommand(`cd ${dirHandle.name}`, 1);
+                          } else {
+                            console.error('File System API not supported in this browser');
+                          }
                         } catch (err) {
                           console.error('Erreur lors de la sélection du dossier:', err);
                         }
@@ -184,16 +237,13 @@ export function TerminalUI(props: TerminalUIProps) {
 
         {/* Terminal Content - Only show if not minimized */}
         {!props.isMinimized && (
-          <>
+          <div className="terminal-content-wrapper">
             {/* Terminal Output */}
             <div 
               ref={props.terminalRef}
-              className="overflow-y-auto p-4 font-mono text-sm terminal-scrollbar"
+              className="terminal-scrollbar"
               style={{ 
-                height: props.mergedConfig.readOnlyMode 
-                  ? `${props.height - 40}px`  // Hauteur ajustée sans la barre d'input
-                  : `${props.height - 96}px`,  // Hauteur normale
-                fontSize: `${props.mergedConfig.fontSize}px`,  // Appliquer également au contenu
+                fontSize: `${props.mergedConfig.fontSize}px`,
               }}
             >
               {props.history.map((entry, index) => (
@@ -220,16 +270,18 @@ export function TerminalUI(props: TerminalUIProps) {
 
             {/* Command Input - Caché en mode lecture seule */}
             {!props.mergedConfig.readOnlyMode && (
-              <form onSubmit={props.handleSubmit} className="p-2 border-t border-[#333] flex items-center">
-                <span className="terminal-prompt mr-2">&gt;</span>
-                <input
-                  type="text"
-                  value={props.command}
-                  onChange={(e) => props.setCommand(e.target.value)}
-                  className="flex-1 bg-transparent border-none outline-none text-[#d4d4d4] font-mono"
-                  placeholder="Type a command..."
-                />
-                <div className="flex space-x-2"> 
+              <form onSubmit={props.handleSubmit} className="terminal-input-area flex items-center gap-2">
+                <div className="flex-1 flex items-center">
+                  <span className="terminal-prompt mr-2">&gt;</span>
+                  <input
+                    type="text"
+                    value={props.command}
+                    onChange={(e) => props.setCommand(e.target.value)}
+                    className="flex-1 bg-transparent border-none outline-none text-[#d4d4d4] font-mono"
+                    placeholder="Type a command..."
+                  />
+                </div>
+                <div className="flex space-x-2 flex-shrink-0"> 
                   <TooltipProvider delayDuration={50}>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -289,7 +341,7 @@ export function TerminalUI(props: TerminalUIProps) {
                 </div>
               </form>
             )}
-          </>
+          </div>
         )}
       </div>
     </div>

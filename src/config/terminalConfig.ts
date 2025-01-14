@@ -17,6 +17,7 @@ export type TerminalConfig = {
   scrollbackLimit: number;
   startMinimized: boolean;  // Ajout de la nouvelle option
   showFloatingButton: boolean;  // Nouvelle option
+  showTerminal: boolean;         // Nouvelle option pour contrôler la visibilité
   readOnlyMode: boolean;  // Nouvelle option
 };
 
@@ -25,16 +26,18 @@ export const defaultConfig: TerminalConfig = {
     readOnlyMode: false,    // Par défaut, terminal interactif complet
     startFullscreen: false,
     showFloatingButton: true,  // Par défaut, on montre le bouton flottant
+    showTerminal: true,         // Valeur par défaut pour contrôler la visibilité
     startMinimized: false,    // Valeur par défaut globale
     defaultHeight: 320,
     minHeight: 200,
+    minWidth: 300,  // Valeur par défaut pour la largeur minimale
     showExecutedCommands: true,
     keepCommandHistory: true,
     maxHistoryLength: 100,
     theme: 'dark',
     fontSize: 14,
     fontFamily: 'monospace',
-    promptString: '$ ',
+    promptString: '$ ', // ⌘ // % // $ // >
     showPath: true,
     maxOutputLength: 1000,
     scrollbackLimit: 1000,

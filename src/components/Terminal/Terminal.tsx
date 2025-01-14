@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
+import TerminalSearch from './terminalAddons'; // Importer le composant de recherche
 import { Button } from "@/components/ui/button";
 import { X, Minus, Maximize2, Terminal as TerminalIcon, Trash2, Plus, Loader2, HelpCircle, Eraser, Info, FolderOpen, Minimize2 } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
@@ -8,7 +9,7 @@ import { executeRemoteCommand } from '../../services/terminalApi';
 // import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 // import { getFullPath } from "../../utils/pathUtils";
 import { translateCommand, shouldTranslateCommand } from '../../utils/osCommands';
-import { terminalConfig } from '@/config/terminalConfig';
+import { terminalConfig, TerminalConfig } from '@/config/terminalConfig'; // Importer le type TerminalConfig
 import { TerminalUI } from './TerminalUI';
 
 interface TerminalOutput {
@@ -49,23 +50,19 @@ const formatCommand = (command: string) => {
   const firstWord = words[0];
   const rest = command.slice(firstWord.length);
   
-  // Modifier le regex pour ne détecter les paramètres que s'ils sont précédés d'un espace
-  const paramRegex = /(\s-[a-zA-Z]+)|("[^"]*")|('[^']*')/g;
-  // Mon tabarnak de AI, t'es mieux de pas toucher a mes commentaires de regex suivant ou précèdant je t'arrache la tête
-  // const paramRegex = /[A-Za-z]:(?:\\|\/)+(?:[^\\/:*?"<>|\r\n]+(?:\\|\/)+)+[^\\/:*?"<>|\r\n'")\]]+/g;  
-
-  
+  // Modifier le regex pour inclure les paramètres avec un ou deux tirets
+  const paramRegex = /(\s-[a-zA-Z]+|\s--[a-zA-Z-]+)|("[^"]*")|('[^']*')/g;
   
   const formattedRest = rest.replace(paramRegex, match => {
-    if (match.startsWith(' -')) { // Noter l'espace avant le tiret
-      return `<span class="text-yellow-500">${match}</span>`; // Paramètres en jaune
+    if (match.startsWith(' -')) {
+      return `<span class="text-gray-400">${match}</span>`; // Paramètres en orange ou gray
     }
-    return `<span class="text-[#3b8eea]">${match}</span>`; // Chaînes entre guillemets
+    return `<span class="text-[#3b8eea]">${match}</span>`; // Chaînes entre guillemets en bleu
   });
 
   return (
     <>
-      <span className="terminal-command-keyword">{firstWord}</span>
+      <span className="text-yellow-300">{firstWord}</span>
       <span 
         className="terminal-command"
         dangerouslySetInnerHTML={{ __html: formattedRest }}
