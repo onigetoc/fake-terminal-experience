@@ -8,22 +8,13 @@ import { isCustomCommand, executeCustomCommand } from '../services/customCommand
 const execAsync = promisify(exec);
 let currentWorkingDirectory = process.cwd();
 
-// Configuration de base
+// Configuration de base pour détecter Windows
 const isWindows = process.platform === 'win32';
 
-// Liste des commandes qui nécessitent un traitement spécial pour l'encodage
-const specialEncodingCommands = {
-  tree: true,
-  dir: true,
-  type: true,
-  chcp: true,
-  fc: true  // Ajout de fc ici
-};
-
-// Fonction utilitaire pour détecter l'encodage approprié
+// Différents encodages selon l'OS
 function getProperEncoding(command: string): string {
   if (isWindows) {
-    // Commandes spécifiques qui nécessitent un encodage différent
+    // Windows utilise différents encodages selon les commandes
     if (command.startsWith('dir') || command.includes('tree')) {
       return 'cp850';  // Pour les commandes système Windows
     }
@@ -32,10 +23,19 @@ function getProperEncoding(command: string): string {
   return 'utf8';  // Pour Unix/Linux/MacOS
 }
 
-// Fonction utilitaire pour obtenir la langue système
+// Détection de la langue du système
 function getSystemLocale(): string {
   return Intl.DateTimeFormat().resolvedOptions().locale || 'en-US';
 }
+
+// Liste des commandes qui nécessitent un traitement spécial
+const specialEncodingCommands = {
+  tree: true,
+  dir: true,
+  type: true,
+  chcp: true,
+  fc: true
+};
 
 // Liste des commandes qui nécessitent PowerShell sur Windows
 const windowsSpecialCommands = ['dir', 'tree', 'type', 'systeminfo'];

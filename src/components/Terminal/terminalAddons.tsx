@@ -1,270 +1,215 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef, forwardRef, useImperativeHandle } from 'react';
 import { X, Search, ArrowUp, ArrowDown } from 'lucide-react';
-
-interface SearchMatch {
-    text: string;
-    index: number;
-}
 
 interface SearchProps {
     isTerminalFocused: boolean;
 }
 
-const TerminalSearch = ({ isTerminalFocused }: SearchProps) => {
+// On utilise forwardRef pour exposer removeAllHighlights
+function TerminalSearchComponent(
+    { isTerminalFocused }: SearchProps,
+    ref: React.Ref<unknown>
+) {
     const [isOpen, setIsOpen] = useState(false);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [matches, setMatches] = useState<SearchMatch[]>([]);
-    const [currentMatchIndex, setCurrentMatchIndex] = useState(-1);
+    const [searchText, setSearchText] = useState('');
+    const [matches, setMatches] = useState<number>(0);
+    const [currentIndex, setCurrentIndex] = useState(-1);
+    const contentRef = useRef<HTMLElement | null>(null);
 
-    const findMatches = useCallback(() => {
-        if (!searchTerm) {
-            setMatches([]);
-            setCurrentMatchIndex(-1);
-            return;
-        }
-
-        const terminalContent = document.querySelector('.terminal-scrollbar');
-        if (!terminalContent) return;
-
-        const text = terminalContent.textContent || '';
-        const escapedSearchTerm = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-        try {
-            const regex = new RegExp(escapedSearchTerm, 'gi');
-            const newMatches: SearchMatch[] = [];
-            let match;
-            
-            regex.lastIndex = 0;
-            
-            while ((match = regex.exec(text)) !== null) {
-                newMatches.push({
-                    text: match[0],
-                    index: match.index
-                });
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (!isTerminalFocused) {
+                // Laisser le raccourci natif du navigateur fonctionner
+                return; 
             }
-
-            // Keep the current match if possible
-            if (newMatches.length > 0) {
-                if (currentMatchIndex === -1) {
-                    // If no current match, start at the first one
-                    setCurrentMatchIndex(0);
-                } else {
-                    // Try to keep highlighting the same region of text
-                    const currentMatch = matches[currentMatchIndex];
-                    if (currentMatch) {
-                        const nearestMatchIndex = newMatches.findIndex(
-                            match => Math.abs(match.index - currentMatch.index) < currentMatch.text.length
-                        );
-                        if (nearestMatchIndex !== -1) {
-                            setCurrentMatchIndex(nearestMatchIndex);
-                        } else {
-                            // If we can't find a nearby match, stay at current index if valid
-                            setCurrentMatchIndex(prev => 
-                                prev < newMatches.length ? prev : 0
-                            );
-                        }
-                    }
+            if (e.ctrlKey && e.key === 'f') {
+                e.preventDefault();
+                // Ouvrir la recherche uniquement si elle est fermée
+                if (!isOpen) {
+                    setIsOpen(true);
                 }
-            } else {
-                setCurrentMatchIndex(-1);
-            }
-
-            setMatches(newMatches);
-            highlightMatches(newMatches, escapedSearchTerm);
-        } catch (error) {
-            console.error('Regex error:', error);
-        }
-    }, [searchTerm, matches, currentMatchIndex]);
-
-    const highlightMatches = useCallback((matchesToHighlight: SearchMatch[], escapedSearchTerm: string) => {
-        // Clear existing highlights first
-        const existingHighlights = document.querySelectorAll('.terminal-search-highlight');
-        existingHighlights.forEach(el => {
-            const parent = el.parentNode;
-            if (parent) {
-                parent.replaceChild(document.createTextNode(el.textContent || ''), el);
-            }
-        });
-
-        if (!searchTerm || matchesToHighlight.length === 0) return;
-
-        const terminalContent = document.querySelector('.terminal-scrollbar');
-        if (!terminalContent) return;
-
-        const walker = document.createTreeWalker(
-            terminalContent,
-            NodeFilter.SHOW_TEXT,
-            null
-        );
-
-        let node;
-        let currentTextIndex = 0;
-
-        while ((node = walker.nextNode())) {
-            const text = node.textContent || '';
-            const matches = [...text.matchAll(new RegExp(escapedSearchTerm, 'gi'))];
-            
-            if (matches.length > 0) {
-                const span = document.createElement('span');
-                let lastIndex = 0;
-                let html = '';
-
-                matches.forEach((match, index) => {
-                    const matchIndex = currentTextIndex + index;
-                    const isCurrentMatch = matchIndex === currentMatchIndex;
-                    
-                    html += text.slice(lastIndex, match.index);
-                    html += `<span class="terminal-search-highlight ${
-                        isCurrentMatch ? 'terminal-search-current' : ''
-                    }">${match[0]}</span>`;
-                    
-                    lastIndex = match.index! + match[0].length;
-                });
-
-                html += text.slice(lastIndex);
-                span.innerHTML = html;
-                
-                if (node.parentNode) {
-                    node.parentNode.replaceChild(span, node);
-                }
-            }
-            currentTextIndex += matches.length;
-        }
-    }, [searchTerm, currentMatchIndex]);
-
-    const navigateMatches = useCallback((direction: 'next' | 'prev') => {
-        if (matches.length === 0) return;
-
-        setCurrentMatchIndex(prev => {
-            const next = direction === 'next'
-                ? (prev + 1) % matches.length
-                : (prev - 1 + matches.length) % matches.length;
-            return next;
-        });
-    }, [matches.length]);
-
-    const handleKeyDown = useCallback((event: KeyboardEvent) => {
-        if (!isTerminalFocused && !isOpen) return;
-
-        if (event.ctrlKey && event.key === 'f') {
-            event.preventDefault();
-            event.stopPropagation();
-            setIsOpen(prev => !prev);
-            return;
-        }
-
-        if (isOpen) {
-            if (event.key === 'Escape') {
-                event.preventDefault();
+            } else if (e.key === 'Escape' && isOpen) {
+                e.preventDefault();
                 handleClose();
-            } else if (event.key === 'Enter' || event.key === 'F3') {
-                event.preventDefault();
-                navigateMatches(event.shiftKey ? 'prev' : 'next');
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [isOpen, isTerminalFocused]);
+
+    // Supprime toutes les balises <mark> pour retrouver le contenu brut
+    const removeHighlightMarks = useCallback((html: string) => {
+        return html.replace(
+            /<mark class="[^"]*">([^<]+)<\/mark>/gi,
+            '$1'
+        );
+    }, []);
+
+    // Nouvelle fonction : vérifie si le noeud est enfant d'un élément avec la classe spécifique
+    function hasParentClass(node: Node, className: string): boolean {
+        let current: HTMLElement | null = node.parentElement as HTMLElement;
+        while (current) {
+            if (current.classList && current.classList.contains(className)) {
+                return true;
+            }
+            current = current.parentElement as HTMLElement;
+        }
+        return false;
+    }
+
+    // Recherche tous les noeuds texte
+    const getTextNodes = useCallback((el: Node): Text[] => {
+        const nodes: Text[] = [];
+        const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+        let node;
+        while (node = walker.nextNode()) {
+            // Ignorer les noeuds texte dans .terminal-command
+            if (!hasParentClass(node, 'terminal-command')) {
+                nodes.push(node as Text);
             }
         }
-    }, [isOpen, isTerminalFocused, navigateMatches]);
+        return nodes;
+    }, []);
 
-    const handleClose = () => {
-        setIsOpen(false);
-        setSearchTerm('');
-        setMatches([]);
-        setCurrentMatchIndex(-1);
-        
-        // Nettoyer les surlignages
-        const highlights = document.querySelectorAll('.terminal-search-highlight');
-        highlights.forEach(el => {
-            const parent = el.parentNode;
-            if (parent) {
-                parent.replaceChild(document.createTextNode(el.textContent || ''), el);
+    // Fonction de surlignage
+    const highlightText = useCallback(() => {
+        if (!contentRef.current) return;
+
+        // Quand la zone de recherche est vide, on enlève tous les <mark> puis on quitte
+        if (!searchText.trim()) {
+            const cleanHTML = removeHighlightMarks(contentRef.current.innerHTML);
+            contentRef.current.innerHTML = cleanHTML;
+            setMatches(0);
+            setCurrentIndex(-1);
+            return;
+        }
+
+        const plaintext = removeHighlightMarks(contentRef.current.innerHTML);
+        contentRef.current.innerHTML = plaintext;
+
+        // Parcourir chaque noeud texte et insérer <mark> autour de searchText
+        const textNodes = getTextNodes(contentRef.current);
+        let totalMatches = 0;
+        textNodes.forEach(node => {
+            const nodeText = node.textContent || '';
+            const regex = new RegExp(`(${searchText})`, 'gi');
+            let lastIndex = 0, newHTML = '';
+            let match;
+
+            while ((match = regex.exec(nodeText)) !== null) {
+                totalMatches++;
+                const isCurrent = (totalMatches - 1) === currentIndex;
+                newHTML += nodeText.substring(lastIndex, match.index)
+                    + `<mark class="terminal-search-highlight${isCurrent ? ' terminal-search-current' : ''}">`
+                    + match[0]
+                    + '</mark>';
+                lastIndex = match.index + match[0].length;
+            }
+            newHTML += nodeText.substring(lastIndex);
+
+            if (newHTML !== nodeText) {
+                const tmp = document.createElement('span');
+                tmp.innerHTML = newHTML;
+                node.replaceWith(...Array.from(tmp.childNodes));
             }
         });
+        setMatches(totalMatches);
+
+        // Centrer la vue sur la correspondance actuelle
+        if (currentIndex >= 0) {
+            contentRef.current.querySelector('.terminal-search-current')?.scrollIntoView({
+                behavior: 'smooth',
+                block: 'center'
+            });
+        }
+    }, [searchText, currentIndex, removeHighlightMarks, getTextNodes]);
+
+    // Observe ouverture & texte
+    useEffect(() => {
+        if (!isOpen) return;
+        contentRef.current = document.querySelector('.terminal-scrollbar');
+        highlightText();
+    }, [isOpen, searchText, currentIndex, highlightText]);
+
+    const handleNext = () => {
+        if (matches > 0) {
+            setCurrentIndex(prev => (prev + 1) % matches);
+        }
+    };
+
+    const handlePrev = () => {
+        if (matches > 0) {
+            setCurrentIndex(prev => (prev - 1 + matches) % matches);
+        }
     };
 
     useEffect(() => {
-        window.addEventListener('keydown', handleKeyDown);
-        return () => {
-            window.removeEventListener('keydown', handleKeyDown);
-        };
-    }, [handleKeyDown]);
+        highlightText();
+    }, [currentIndex, highlightText]);
 
-    useEffect(() => {
-        if (isOpen) {
-            const input = document.querySelector('.search-container input');
-            if (input instanceof HTMLInputElement) {
-                input.focus();
-            }
+    const handleClose = () => {
+        setIsOpen(false);
+        setSearchText('');
+        setMatches(0);
+        setCurrentIndex(-1);
+        if (contentRef.current) {
+            // Nettoyer pour retirer les <mark>
+            const cleanHTML = removeHighlightMarks(contentRef.current.innerHTML);
+            contentRef.current.innerHTML = cleanHTML;
         }
-    }, [isOpen]);
+    };
 
-    useEffect(() => {
-        console.log('Search term changed:', searchTerm); // Debug log
-        const timeoutId = setTimeout(() => {
-            findMatches();
-        }, 100); // Add small delay to prevent too frequent updates
-
-        return () => clearTimeout(timeoutId);
-    }, [searchTerm, findMatches]);
-
-    useEffect(() => {
-        if (currentMatchIndex >= 0 && matches[currentMatchIndex]) {
-            const terminalContent = document.querySelector('.terminal-scrollbar');
-            const highlights = document.querySelectorAll('.terminal-search-highlight');
-            
-            if (terminalContent && highlights[currentMatchIndex]) {
-                const highlight = highlights[currentMatchIndex];
-                highlight.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                
-                // Ajouter une classe spéciale pour le résultat actuel
-                highlights.forEach(el => el.classList.remove('terminal-search-current'));
-                highlight.classList.add('terminal-search-current');
+    useImperativeHandle(ref, () => ({
+        removeAllHighlights() {
+            // Revenir au contenu “propre” et fermer la recherche
+            if (contentRef.current) {
+                const cleanHTML = removeHighlightMarks(contentRef.current.innerHTML);
+                contentRef.current.innerHTML = cleanHTML;
             }
+            setSearchText('');
+            setMatches(0);
+            setCurrentIndex(-1);
+            setIsOpen(false);
         }
-    }, [currentMatchIndex, matches]);
+    }));
 
     return (
         <>
             {isOpen && (
-                <div 
-                    className="absolute right-4 top-[76px] z-50 bg-[#1e1e1e] shadow-lg"
-                    style={{ maxWidth: '300px' }}
-                >
+                <div className="absolute right-4 top-[76px] z-50 bg-[#1e1e1e] shadow-lg">
                     <div className="search-container bg-[#252526] flex items-center gap-2 p-1.5">
                         <Search className="w-4 h-4 text-gray-400" />
                         <input
                             type="text"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
+                            value={searchText}
+                            onChange={(e) => {
+                                setSearchText(e.target.value);
+                                setCurrentIndex(0); // Forcer la première occurrence
+                            }}
                             placeholder="Find in terminal"
                             className="flex-1 border-none outline-none bg-[#1e1e1e] text-gray-200 text-sm"
                             autoFocus
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    handleNext();
+                                }
+                            }}
                         />
-                        {matches.length > 0 && (
+                        {matches > 0 && (
                             <div className="flex items-center gap-2 text-gray-400 text-xs">
-                                <span>{currentMatchIndex + 1}/{matches.length}</span>
+                                <span>{(currentIndex >= 0 ? currentIndex + 1 : 0)}/{matches}</span>
                                 <div className="flex gap-1">
-                                    <button
-                                        onClick={() => setCurrentMatchIndex(prev => 
-                                            (prev - 1 + matches.length) % matches.length
-                                        )}
-                                        className="p-1 hover:bg-[#2a2d2e] rounded"
-                                    >
+                                    <button onClick={handlePrev} className="p-1 hover:bg-[#2a2d2e] rounded">
                                         <ArrowUp className="w-3 h-3" />
                                     </button>
-                                    <button
-                                        onClick={() => setCurrentMatchIndex(prev => 
-                                            (prev + 1) % matches.length
-                                        )}
-                                        className="p-1 hover:bg-[#2a2d2e] rounded"
-                                    >
+                                    <button onClick={handleNext} className="p-1 hover:bg-[#2a2d2e] rounded">
                                         <ArrowDown className="w-3 h-3" />
                                     </button>
                                 </div>
                             </div>
                         )}
-                        <button 
-                            onClick={handleClose}
-                            className="hover:bg-[#2a2d2e] p-1 rounded"
-                        >
+                        <button onClick={handleClose} className="hover:bg-[#2a2d2e] p-1 rounded">
                             <X className="w-4 h-4" />
                         </button>
                     </div>
@@ -272,6 +217,7 @@ const TerminalSearch = ({ isTerminalFocused }: SearchProps) => {
             )}
         </>
     );
-};
+}
 
+const TerminalSearch = forwardRef(TerminalSearchComponent);
 export default TerminalSearch;

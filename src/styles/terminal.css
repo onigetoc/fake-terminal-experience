@@ -55,6 +55,7 @@
 .terminal-search-highlight {
   background-color: rgba(255, 255, 0, 0.2);
   border-radius: 2px;
+  color: #d4d4d4;
 }
 
 .terminal-search-current {
@@ -140,7 +141,9 @@
 
 .terminal-prompt {
     color: #519768;
+    font-weight: 500;
 }
+
 .terminal-link {
     color: #3b8eea;
     text-decoration: none;

@@ -254,6 +254,9 @@ export const Terminal = forwardRef<any, TerminalProps>(({ config: propsConfig },
     }
   };
 
+  // On crée une ref vers TerminalSearch
+  const searchRef = useRef<{ removeAllHighlights: () => void } | null>(null);
+
   const executeCommand = async (cmd: string | string[], displayInTerminal: number = 1) => {
     const commands = Array.isArray(cmd) ? cmd : [cmd];
 
@@ -261,6 +264,8 @@ export const Terminal = forwardRef<any, TerminalProps>(({ config: propsConfig },
       if (!command.trim()) continue;
 
       if (command === 'clear' || command === 'cls' ) {
+        // Enlever le surlignage avant d’effacer
+        searchRef.current?.removeAllHighlights();
         setHistory([]);
         setCommand('');
         continue;

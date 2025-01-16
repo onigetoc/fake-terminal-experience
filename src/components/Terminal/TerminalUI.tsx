@@ -70,6 +70,20 @@ export function TerminalUI(props: TerminalUIProps) {
 
   const tooltipStyle = "bg-[#252526] text-[#d4d4d4] border border-[#333] shadow-md";
 
+  const getPromptSymbol = (os: string) => {
+    switch (os.toLowerCase()) {
+      case 'macos': // ~ 
+        return '%';
+      case 'linux':
+        return '$';
+      case 'windows':
+      default:
+        return '>';
+    }
+  };
+
+  const promptSymbol = getPromptSymbol(props.osInfo);
+
   if (!props.isOpen) {
     return (
       <Button
@@ -249,7 +263,7 @@ export function TerminalUI(props: TerminalUIProps) {
               {props.history.map((entry, index) => (
                 <div key={index} className="mb-2">
                   <div className="flex items-center">
-                    <span className="terminal-prompt mr-2">&gt;</span>
+                    <span className="terminal-prompt mr-2">{promptSymbol}</span>
                     <div className="terminal-command">
                       {props.formatCommand(entry.command)}
                     </div>
@@ -272,7 +286,7 @@ export function TerminalUI(props: TerminalUIProps) {
             {!props.mergedConfig.readOnlyMode && (
               <form onSubmit={props.handleSubmit} className="terminal-input-area flex items-center gap-2">
                 <div className="flex-1 flex items-center">
-                  <span className="terminal-prompt mr-2">&gt;</span>
+                  <span className="terminal-prompt mr-2">{promptSymbol}</span>
                   <input
                     type="text"
                     value={props.command}

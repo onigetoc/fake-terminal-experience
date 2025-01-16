@@ -37,7 +37,7 @@ export const defaultConfig: TerminalConfig = {
     theme: 'dark',
     fontSize: 14,
     fontFamily: 'monospace',
-    promptString: '$ ', // ⌘ // % // $ // >
+    // promptString: '$ ', // ⌘ // % // $ // >
     showPath: true,
     maxOutputLength: 1000,
     scrollbackLimit: 1000,
