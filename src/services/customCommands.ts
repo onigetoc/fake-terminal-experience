@@ -2,7 +2,7 @@ const CUSTOM_COMMANDS = {
   help: () => `Available commands:
   help    - Show this help message
   about   - About this terminal
-  clear   - Clear terminal screen
+  cls | clear   - Clear terminal screen
   
   executing command:
   executeCommand('help')}

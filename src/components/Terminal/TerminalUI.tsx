@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import {
   Trash2, FolderOpen, Plus, Minus, Maximize2, Minimize2, X, Terminal as TerminalIcon,
@@ -35,6 +35,7 @@ interface TerminalUIProps {
 // On reçoit en props tout ce qui est nécessaire pour l’UI (états, handlers, etc.)
 export function TerminalUI(props: TerminalUIProps) {
   const [isTerminalFocused, setIsTerminalFocused] = React.useState(false);
+  const searchRef = useRef(null);  // Ajout de la ref pour TerminalSearch
 
   // Add click outside handler
   React.useEffect(() => {
@@ -117,7 +118,10 @@ export function TerminalUI(props: TerminalUIProps) {
         }
       }}
     >
-      <TerminalSearch isTerminalFocused={isTerminalFocused} />
+      <TerminalSearch 
+        ref={searchRef}
+        isTerminalFocused={isTerminalFocused} 
+      />
       <div
         className="terminal-window"
         style={{
@@ -291,8 +295,12 @@ export function TerminalUI(props: TerminalUIProps) {
                     type="text"
                     value={props.command}
                     onChange={(e) => props.setCommand(e.target.value)}
-                    className="flex-1 bg-transparent border-none outline-none text-[#d4d4d4] font-mono"
+                    className="terminal-command-input flex-1 bg-transparent border-none outline-none text-[#d4d4d4] font-mono"
                     placeholder="Type a command..."
+                    onKeyDown={(e) => {
+                      // Ne pas propager les événements de l'input du terminal
+                      e.stopPropagation();
+                    }}
                   />
                 </div>
                 <div className="flex space-x-2 flex-shrink-0"> 

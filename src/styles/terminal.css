@@ -7,6 +7,15 @@
   background-color: #1e1e1e;
   background: transparent;
   /* min-width: 600px; */
+  transition: opacity 0.2s ease-in-out;
+}
+
+.search-container.invisible {
+  pointer-events: none;
+}
+
+.search-container.visible {
+  pointer-events: auto;
 }
 
 .search-container input {

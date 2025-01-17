@@ -1,221 +1,293 @@
-import React, { useState, useEffect, useCallback, useRef, forwardRef, useImperativeHandle } from 'react';
-import { X, Search, ArrowUp, ArrowDown } from 'lucide-react';
+import React, { useState, useEffect, forwardRef, useImperativeHandle, useRef } from 'react';
+import { X, Search, ChevronUp, ChevronDown } from 'lucide-react';
 
 interface SearchProps {
     isTerminalFocused: boolean;
 }
 
-// On utilise forwardRef pour exposer removeAllHighlights
+// Fonctions utilitaires pour la recherche
+function escapeRegExp(text: string) {
+    return text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
+}
+
+// Simplifier la fonction removeHighlightMarks
+function removeHighlightMarks(html: string) {
+    // On ne fait plus de manipulation complexe, on nettoie juste les balises mark
+    return html.replace(/<\/?mark[^>]*>/g, '');
+}
+
+function highlightText(node: Node, searchText: string, currentIndex: number, matchIndexRef: { current: number }): void {
+    if (!searchText) return;
+
+    // Vérifie si le nœud est dans la zone de sortie (terminal-output) et pas dans une commande
+    const isInCommand = node.parentElement?.closest('.terminal-command');
+    const isInOutput = node.parentElement?.closest('.terminal-output');
+
+    if (node.nodeType === Node.TEXT_NODE && isInOutput && !isInCommand) {
+        const text = node.textContent || '';
+        const regex = new RegExp(escapeRegExp(searchText), 'gi');
+        let match;
+        let lastIndex = 0;
+        const fragments = [];
+
+        while ((match = regex.exec(text)) !== null) {
+            if (match.index > lastIndex) {
+                fragments.push(document.createTextNode(text.slice(lastIndex, match.index)));
+            }
+
+            const mark = document.createElement('mark');
+            mark.textContent = match[0];
+            mark.classList.add('terminal-search-highlight');
+            
+            if (matchIndexRef.current === currentIndex) {
+                mark.classList.add('terminal-search-current');
+            }
+            
+            fragments.push(mark);
+            lastIndex = regex.lastIndex;
+            matchIndexRef.current++;
+        }
+
+        if (lastIndex < text.length) {
+            fragments.push(document.createTextNode(text.slice(lastIndex)));
+        }
+
+        if (fragments.length > 0) {
+            const parent = node.parentNode;
+            if (parent && parent.contains(node)) {
+                fragments.forEach(fragment => parent.insertBefore(fragment, node));
+                parent.removeChild(node);
+            }
+        }
+    } else {
+        // Parcourir récursivement les nœuds enfants
+        for (const child of Array.from(node.childNodes)) {
+            highlightText(child, searchText, currentIndex, matchIndexRef);
+        }
+    }
+}
+
 function TerminalSearchComponent(
     { isTerminalFocused }: SearchProps,
     ref: React.Ref<unknown>
 ) {
     const [isOpen, setIsOpen] = useState(false);
     const [searchText, setSearchText] = useState('');
-    const [matches, setMatches] = useState<number>(0);
-    const [currentIndex, setCurrentIndex] = useState(-1);
+    const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
+    const [totalMatches, setTotalMatches] = useState(0);
     const contentRef = useRef<HTMLElement | null>(null);
+    const observerRef = useRef<MutationObserver | null>(null);
+    const inputRef = useRef<HTMLInputElement>(null); // Ajouter cette ref pour l'input
 
+    // Fonction pour mettre à jour la référence au contenu du terminal
     useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (!isTerminalFocused) {
-                // Laisser le raccourci natif du navigateur fonctionner
-                return; 
-            }
-            if (e.ctrlKey && e.key === 'f') {
-                e.preventDefault();
-                // Ouvrir la recherche uniquement si elle est fermée
-                if (!isOpen) {
-                    setIsOpen(true);
+        // Cibler spécifiquement le contenu du terminal
+        contentRef.current = document.querySelector('.terminal-scrollbar');
+        
+        if (contentRef.current && !observerRef.current) {
+            // Créer un observateur pour détecter les changements dans le terminal
+            observerRef.current = new MutationObserver(() => {
+                if (searchText) {
+                    performSearch(searchText, currentMatchIndex);
                 }
-            } else if (e.key === 'Escape' && isOpen) {
-                e.preventDefault();
-                handleClose();
+            });
+            
+            // Observer les changements dans le contenu du terminal
+            observerRef.current.observe(contentRef.current, {
+                childList: true,
+                subtree: true,
+                characterData: true
+            });
+        }
+
+        return () => {
+            if (observerRef.current) {
+                observerRef.current.disconnect();
             }
         };
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [isOpen, isTerminalFocused]);
+    }, [searchText, currentMatchIndex]);
 
-    // Supprime toutes les balises <mark> pour retrouver le contenu brut
-    const removeHighlightMarks = useCallback((html: string) => {
-        return html.replace(
-            /<mark class="[^"]*">([^<]+)<\/mark>/gi,
-            '$1'
-        );
-    }, []);
+    const scrollToMatch = (mark: HTMLElement) => {
+        mark.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center'
+        });
+    };
 
-    // Nouvelle fonction : vérifie si le noeud est enfant d'un élément avec la classe spécifique
-    function hasParentClass(node: Node, className: string): boolean {
-        let current: HTMLElement | null = node.parentElement as HTMLElement;
-        while (current) {
-            if (current.classList && current.classList.contains(className)) {
-                return true;
-            }
-            current = current.parentElement as HTMLElement;
-        }
-        return false;
-    }
+    const performSearch = (text: string, index: number) => {
+        if (!contentRef.current || !text) return;
 
-    // Recherche tous les noeuds texte
-    const getTextNodes = useCallback((el: Node): Text[] => {
-        const nodes: Text[] = [];
-        const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
-        let node;
-        while (node = walker.nextNode()) {
-            // Ignorer les noeuds texte dans .terminal-command
-            if (!hasParentClass(node, 'terminal-command')) {
-                nodes.push(node as Text);
-            }
-        }
-        return nodes;
-    }, []);
-
-    // Fonction de surlignage
-    const highlightText = useCallback(() => {
-        if (!contentRef.current) return;
-
-        // Quand la zone de recherche est vide, on enlève tous les <mark> puis on quitte
-        if (!searchText.trim()) {
-            const cleanHTML = removeHighlightMarks(contentRef.current.innerHTML);
-            contentRef.current.innerHTML = cleanHTML;
-            setMatches(0);
-            setCurrentIndex(-1);
+        // Vérifier si le terminal a du contenu avant de faire quoi que ce soit
+        if (contentRef.current.children.length === 0) {
+            setTotalMatches(0);
             return;
         }
 
-        const plaintext = removeHighlightMarks(contentRef.current.innerHTML);
-        contentRef.current.innerHTML = plaintext;
+        try {
+            // Nettoyer d'abord les surlignages existants
+            const cleanHTML = removeHighlightMarks(contentRef.current.innerHTML);
+            contentRef.current.innerHTML = cleanHTML;
 
-        // Parcourir chaque noeud texte et insérer <mark> autour de searchText
-        const textNodes = getTextNodes(contentRef.current);
-        let totalMatches = 0;
-        textNodes.forEach(node => {
-            const nodeText = node.textContent || '';
-            const regex = new RegExp(`(${searchText})`, 'gi');
-            let lastIndex = 0, newHTML = '';
-            let match;
+            // Effectuer la nouvelle recherche
+            const matchIndexRef = { current: 0 };
+            highlightText(contentRef.current, text, index, matchIndexRef);
+            
+            const totalFound = matchIndexRef.current;
+            setTotalMatches(totalFound);
 
-            while ((match = regex.exec(nodeText)) !== null) {
-                totalMatches++;
-                const isCurrent = (totalMatches - 1) === currentIndex;
-                newHTML += nodeText.substring(lastIndex, match.index)
-                    + `<mark class="terminal-search-highlight${isCurrent ? ' terminal-search-current' : ''}">`
-                    + match[0]
-                    + '</mark>';
-                lastIndex = match.index + match[0].length;
+            // Faire défiler jusqu'au match actuel
+            if (totalFound > 0) {
+                const marks = contentRef.current.getElementsByClassName('terminal-search-current');
+                if (marks.length > 0) {
+                    scrollToMatch(marks[0] as HTMLElement);
+                }
             }
-            newHTML += nodeText.substring(lastIndex);
-
-            if (newHTML !== nodeText) {
-                const tmp = document.createElement('span');
-                tmp.innerHTML = newHTML;
-                node.replaceWith(...Array.from(tmp.childNodes));
-            }
-        });
-        setMatches(totalMatches);
-
-        // Centrer la vue sur la correspondance actuelle
-        if (currentIndex >= 0) {
-            contentRef.current.querySelector('.terminal-search-current')?.scrollIntoView({
-                behavior: 'smooth',
-                block: 'center'
-            });
-        }
-    }, [searchText, currentIndex, removeHighlightMarks, getTextNodes]);
-
-    // Observe ouverture & texte
-    useEffect(() => {
-        if (!isOpen) return;
-        contentRef.current = document.querySelector('.terminal-scrollbar');
-        highlightText();
-    }, [isOpen, searchText, currentIndex, highlightText]);
-
-    const handleNext = () => {
-        if (matches > 0) {
-            setCurrentIndex(prev => (prev + 1) % matches);
+        } catch (error) {
+            // Si une erreur se produit pendant la recherche, réinitialiser l'état
+            console.error('Search error:', error);
+            setTotalMatches(0);
         }
     };
 
-    const handlePrev = () => {
-        if (matches > 0) {
-            setCurrentIndex(prev => (prev - 1 + matches) % matches);
+    const navigateToMatch = (direction: 'next' | 'previous') => {
+        if (totalMatches === 0) return;
+
+        // Simplification : juste incrémenter pour next, décrémenter pour previous
+        let newIndex = currentMatchIndex;
+        if (direction === 'next') {
+            newIndex = currentMatchIndex + 1;
+            if (newIndex >= totalMatches) newIndex = 0;
+        } else {
+            newIndex = currentMatchIndex - 1;
+            if (newIndex < 0) newIndex = totalMatches - 1;
         }
+
+        console.log('Navigation:', direction, 'de', currentMatchIndex, 'vers', newIndex); // Debug
+        setCurrentMatchIndex(newIndex);
+        performSearch(searchText, newIndex);
     };
 
     useEffect(() => {
-        highlightText();
-    }, [currentIndex, highlightText]);
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.ctrlKey && e.key === 'f' && isTerminalFocused) {
+                e.preventDefault();
+                setIsOpen(true);
+                setTimeout(() => inputRef.current?.focus(), 0);
+                return;
+            }
+
+            if (isOpen && document.activeElement === inputRef.current) {
+                switch(e.key) {
+                    case 'Enter':
+                        // Enter va toujours vers le prochain match
+                        e.preventDefault();
+                        navigateToMatch('next');
+                        break;
+                    case 'ArrowUp':
+                        e.preventDefault();
+                        navigateToMatch('previous');
+                        break;
+                    case 'ArrowDown':
+                        e.preventDefault();
+                        navigateToMatch('next');
+                        break;
+                    case 'Escape':
+                        e.preventDefault();
+                        handleClose();
+                        break;
+                }
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [isOpen, isTerminalFocused, navigateToMatch]);
+
+    // Ajouter un effet pour gérer le focus quand isOpen change
+    useEffect(() => {
+        if (isOpen) {
+            inputRef.current?.focus();
+        }
+    }, [isOpen]);
 
     const handleClose = () => {
         setIsOpen(false);
         setSearchText('');
-        setMatches(0);
-        setCurrentIndex(-1);
-        if (contentRef.current) {
-            // Nettoyer pour retirer les <mark>
-            const cleanHTML = removeHighlightMarks(contentRef.current.innerHTML);
-            contentRef.current.innerHTML = cleanHTML;
+        setCurrentMatchIndex(0);
+        setTotalMatches(0);
+        // Nettoyer uniquement les surlignages de recherche
+        const terminal = document.querySelector('.terminal-scrollbar');
+        if (terminal) {
+            terminal.innerHTML = terminal.innerHTML.replace(/<\/?mark[^>]*>/g, '');
         }
     };
 
     useImperativeHandle(ref, () => ({
         removeAllHighlights() {
-            // Revenir au contenu “propre” et fermer la recherche
+            // Ne plus rien faire ici car le terminal sera déjà vidé par setHistory([])
+            setSearchText('');
+            setIsOpen(false);
+            setCurrentMatchIndex(0);
+            setTotalMatches(0);
+        }
+    }));
+
+    useEffect(() => {
+        if (searchText) {
+            setCurrentMatchIndex(0);  // Réinitialiser l'index lors d'une nouvelle recherche
+            performSearch(searchText, 0);
+        } else {
+            // Si le texte de recherche est vide, nettoyer les surlignages
             if (contentRef.current) {
                 const cleanHTML = removeHighlightMarks(contentRef.current.innerHTML);
                 contentRef.current.innerHTML = cleanHTML;
             }
-            setSearchText('');
-            setMatches(0);
-            setCurrentIndex(-1);
-            setIsOpen(false);
+            setTotalMatches(0);
         }
-    }));
+    }, [searchText]);
 
     return (
-        <>
-            {isOpen && (
-                <div className="absolute right-4 top-[76px] z-50 bg-[#1e1e1e] shadow-lg">
-                    <div className="search-container bg-[#252526] flex items-center gap-2 p-1.5">
-                        <Search className="w-4 h-4 text-gray-400" />
-                        <input
-                            type="text"
-                            value={searchText}
-                            onChange={(e) => {
-                                setSearchText(e.target.value);
-                                setCurrentIndex(0); // Forcer la première occurrence
-                            }}
-                            placeholder="Find in terminal"
-                            className="flex-1 border-none outline-none bg-[#1e1e1e] text-gray-200 text-sm"
-                            autoFocus
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                    e.preventDefault();
-                                    handleNext();
-                                }
-                            }}
-                        />
-                        {matches > 0 && (
-                            <div className="flex items-center gap-2 text-gray-400 text-xs">
-                                <span>{(currentIndex >= 0 ? currentIndex + 1 : 0)}/{matches}</span>
-                                <div className="flex gap-1">
-                                    <button onClick={handlePrev} className="p-1 hover:bg-[#2a2d2e] rounded">
-                                        <ArrowUp className="w-3 h-3" />
-                                    </button>
-                                    <button onClick={handleNext} className="p-1 hover:bg-[#2a2d2e] rounded">
-                                        <ArrowDown className="w-3 h-3" />
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-                        <button onClick={handleClose} className="hover:bg-[#2a2d2e] p-1 rounded">
-                            <X className="w-4 h-4" />
-                        </button>
-                    </div>
+        <div className={`absolute right-4 top-[76px] z-50 bg-[#1e1e1e] shadow-lg transition-opacity duration-200 ${
+            isOpen ? 'opacity-100 visible' : 'opacity-0 invisible'
+        }`}>
+            <div className="search-container bg-[#252526] flex items-center gap-2 p-1.5">
+                <Search className="w-4 h-4 text-gray-400" />
+                <input
+                    ref={inputRef} // Ajouter la ref ici
+                    type="text"
+                    value={searchText}
+                    onChange={(e) => setSearchText(e.target.value)}
+                    // Supprimer le gestionnaire onKeyDown ici puisqu'il est géré dans l'effet au-dessus
+                    placeholder="Find in terminal"
+                    className="flex-1 border-none outline-none bg-[#1e1e1e] text-gray-200 text-sm"
+                    autoFocus={isOpen}
+                />
+                {totalMatches > 0 && (
+                    <span className="text-xs text-gray-400">
+                        {currentMatchIndex + 1} of {totalMatches}
+                    </span>
+                )}
+                <div className="flex gap-1">
+                    <button
+                        onClick={() => navigateToMatch('previous')}
+                        className="p-1 hover:bg-[#2a2d2e] rounded disabled:opacity-50"
+                        disabled={totalMatches === 0}
+                    >
+                        <ChevronUp className="w-4 h-4" />
+                    </button>
+                    <button
+                        onClick={() => navigateToMatch('next')}
+                        className="p-1 hover:bg-[#2a2d2e] rounded disabled:opacity-50"
+                        disabled={totalMatches === 0}
+                    >
+                        <ChevronDown className="w-4 h-4" />
+                    </button>
                 </div>
-            )}
-        </>
+                <button onClick={handleClose} className="hover:bg-[#2a2d2e] p-1 rounded">
+                    <X className="w-4 h-4" />
+                </button>
+            </div>
+        </div>
     );
 }
 

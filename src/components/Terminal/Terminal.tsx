@@ -264,8 +264,8 @@ export const Terminal = forwardRef<any, TerminalProps>(({ config: propsConfig },
       if (!command.trim()) continue;
 
       if (command === 'clear' || command === 'cls' ) {
-        // Enlever le surlignage avant d’effacer
-        searchRef.current?.removeAllHighlights();
+        // Supprimer l'appel à removeAllHighlights - il n'est pas nécessaire
+        // car setHistory([]) va déjà vider le contenu
         setHistory([]);
         setCommand('');
         continue;
@@ -278,7 +278,7 @@ export const Terminal = forwardRef<any, TerminalProps>(({ config: propsConfig },
 
       try {
         const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Command execution timeout')), 60000);
+          setTimeout(() => reject(new Error('Command execution timeout')), 30000);
         });
 
         const outputPromise = simulateCommand(command);

@@ -128,7 +128,7 @@ const SearchHighlight = () => {
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Rechercher..."
+          placeholder="Search..."
           className="p-2 w-48 mr-2 border border-gray-300 rounded"
         />
         <button
