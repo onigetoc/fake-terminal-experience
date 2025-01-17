@@ -2,7 +2,7 @@ import React, { useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import {
   Trash2, FolderOpen, Plus, Minus, Maximize2, Minimize2, X, Terminal as TerminalIcon,
-  Loader2, Eraser, HelpCircle, Info
+  Loader2, Eraser, HelpCircle, Info,
 } from 'lucide-react';
 import TerminalSearch from './terminalAddons.tsx';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -30,6 +30,8 @@ interface TerminalUIProps {
   formatCommand: (command: string) => React.ReactNode;
   formatOutput: (output: string) => React.ReactNode;
   onFolderSelect?: () => Promise<void>;  // Ajouter cette prop
+  observerRef: React.RefObject<MutationObserver | null>;
+  contentRef: React.RefObject<HTMLElement | null>;
 }
 
 // On reçoit en props tout ce qui est nécessaire pour l’UI (états, handlers, etc.)
@@ -121,6 +123,8 @@ export function TerminalUI(props: TerminalUIProps) {
       <TerminalSearch 
         ref={searchRef}
         isTerminalFocused={isTerminalFocused} 
+        observerRef={props.observerRef}
+        contentRef={props.contentRef}
       />
       <div
         className="terminal-window"
@@ -298,8 +302,10 @@ export function TerminalUI(props: TerminalUIProps) {
                     className="terminal-command-input flex-1 bg-transparent border-none outline-none text-[#d4d4d4] font-mono"
                     placeholder="Type a command..."
                     onKeyDown={(e) => {
-                      // Ne pas propager les événements de l'input du terminal
-                      e.stopPropagation();
+                      // Ne stopper la propagation que si ce n'est pas Ctrl+F
+                      if (!(e.ctrlKey && e.key === 'f')) {
+                        e.stopPropagation();
+                      }
                     }}
                   />
                 </div>
@@ -357,6 +363,30 @@ export function TerminalUI(props: TerminalUIProps) {
                       </TooltipTrigger>
                       <TooltipContent className={tooltipStyle}>
                         <p>About</p>
+                      </TooltipContent>
+                    </Tooltip>
+
+                    {/* Nouveau bouton de nettoyage avec nouvelle approche */}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 bg-[#444] hover:bg-red-800 hover:text-white ml-2" // Style différent pour le distinguer
+                          onClick={() => {
+                            if (props.contentRef.current) {
+                              props.contentRef.current.innerHTML = '';
+                            }
+                            props.setHistory([]);
+                            props.setCommand('');
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" /> {/* Icône différente */}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent className={tooltipStyle}>
+                        <p>Reset Terminal</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>

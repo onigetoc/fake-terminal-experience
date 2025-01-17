@@ -257,17 +257,41 @@ export const Terminal = forwardRef<any, TerminalProps>(({ config: propsConfig },
   // On crée une ref vers TerminalSearch
   const searchRef = useRef<{ removeAllHighlights: () => void } | null>(null);
 
+  // Ajouter les refs pour l'observer et le contenu
+  const observerRef = useRef<MutationObserver | null>(null);
+  const contentRef = useRef<HTMLElement | null>(null);
+
+  // Initialiser l'observer
+  useEffect(() => {
+    contentRef.current = document.querySelector('.terminal-scrollbar');
+    
+    if (contentRef.current && !observerRef.current) {
+      observerRef.current = new MutationObserver(() => {
+        // La logique de l'observer sera gérée par TerminalSearch
+      });
+    }
+
+    return () => {
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+      }
+    };
+  }, []);
+
   const executeCommand = async (cmd: string | string[], displayInTerminal: number = 1) => {
     const commands = Array.isArray(cmd) ? cmd : [cmd];
 
     for (const command of commands) {
       if (!command.trim()) continue;
 
-      if (command === 'clear' || command === 'cls' ) {
-        // Supprimer l'appel à removeAllHighlights - il n'est pas nécessaire
-        // car setHistory([]) va déjà vider le contenu
+      if (command === 'clear' || command === 'cls') {
+        // Simplement vider l'historique et la commande
         setHistory([]);
         setCommand('');
+        // Réinitialiser la recherche si elle existe
+        if (searchRef.current) {
+          searchRef.current.removeAllHighlights();
+        }
         continue;
       }
 
@@ -514,6 +538,8 @@ export const Terminal = forwardRef<any, TerminalProps>(({ config: propsConfig },
       mergedConfig={mergedConfig}
       formatCommand={formatCommand} // Passer la fonction formatCommand
       formatOutput={formatOutput} // Passer la fonction formatOutput
+      observerRef={observerRef}
+      contentRef={contentRef}
     />
   );
 });

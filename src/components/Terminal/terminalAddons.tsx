@@ -3,6 +3,8 @@ import { X, Search, ChevronUp, ChevronDown } from 'lucide-react';
 
 interface SearchProps {
     isTerminalFocused: boolean;
+    observerRef: React.RefObject<MutationObserver | null>;
+    contentRef: React.RefObject<HTMLElement | null>;
 }
 
 // Fonctions utilitaires pour la recherche
@@ -68,44 +70,35 @@ function highlightText(node: Node, searchText: string, currentIndex: number, mat
 }
 
 function TerminalSearchComponent(
-    { isTerminalFocused }: SearchProps,
+    { isTerminalFocused, observerRef, contentRef }: SearchProps,
     ref: React.Ref<unknown>
 ) {
     const [isOpen, setIsOpen] = useState(false);
     const [searchText, setSearchText] = useState('');
     const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
     const [totalMatches, setTotalMatches] = useState(0);
-    const contentRef = useRef<HTMLElement | null>(null);
-    const observerRef = useRef<MutationObserver | null>(null);
-    const inputRef = useRef<HTMLInputElement>(null); // Ajouter cette ref pour l'input
+    const inputRef = useRef<HTMLInputElement>(null);
 
-    // Fonction pour mettre à jour la référence au contenu du terminal
+    // Supprimer les anciennes refs car elles sont maintenant passées en props
+    // const contentRef = useRef<HTMLElement | null>(null);
+    // const observerRef = useRef<MutationObserver | null>(null);
+
+    // Mise à jour de l'effet pour utiliser les refs passées en props
     useEffect(() => {
-        // Cibler spécifiquement le contenu du terminal
-        contentRef.current = document.querySelector('.terminal-scrollbar');
-        
-        if (contentRef.current && !observerRef.current) {
-            // Créer un observateur pour détecter les changements dans le terminal
-            observerRef.current = new MutationObserver(() => {
-                if (searchText) {
-                    performSearch(searchText, currentMatchIndex);
-                }
-            });
-            
-            // Observer les changements dans le contenu du terminal
-            observerRef.current.observe(contentRef.current, {
-                childList: true,
-                subtree: true,
-                characterData: true
-            });
-        }
+        // Ne rien faire si les refs ne sont pas initialisées
+        if (!contentRef?.current || !observerRef?.current || !searchText) return;
+
+        // Configurer l'observer uniquement si on fait une recherche
+        observerRef.current.observe(contentRef.current, {
+            childList: true,
+            subtree: true,
+            characterData: true
+        });
 
         return () => {
-            if (observerRef.current) {
-                observerRef.current.disconnect();
-            }
+            observerRef.current?.disconnect();
         };
-    }, [searchText, currentMatchIndex]);
+    }, [searchText, currentMatchIndex, contentRef, observerRef]);
 
     const scrollToMatch = (mark: HTMLElement) => {
         mark.scrollIntoView({
@@ -169,6 +162,7 @@ function TerminalSearchComponent(
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
+            // On vérifie uniquement isTerminalFocused, peu importe où est le focus à l'intérieur du terminal
             if (e.ctrlKey && e.key === 'f' && isTerminalFocused) {
                 e.preventDefault();
                 setIsOpen(true);
@@ -176,11 +170,11 @@ function TerminalSearchComponent(
                 return;
             }
 
+            // Pour la navigation, on vérifie si on est dans l'input de recherche
             if (isOpen && document.activeElement === inputRef.current) {
                 switch(e.key) {
                     case 'Enter':
-                        // Enter va toujours vers le prochain match
-                        e.preventDefault();
+                        e.preventDefault(); // Empêcher la soumission du formulaire
                         navigateToMatch('next');
                         break;
                     case 'ArrowUp':
@@ -201,7 +195,7 @@ function TerminalSearchComponent(
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [isOpen, isTerminalFocused, navigateToMatch]);
+    }, [isOpen, isTerminalFocused, navigateToMatch]); // Ajouter navigateToMatch ici
 
     // Ajouter un effet pour gérer le focus quand isOpen change
     useEffect(() => {
@@ -222,14 +216,54 @@ function TerminalSearchComponent(
         }
     };
 
+    // Nouvelle fonction pour nettoyer complètement le terminal
+    const cleanTerminal = () => {
+        if (!contentRef?.current) return;
+        
+        // 1. D'abord, déconnecter l'observer pour éviter les effets de bord
+        observerRef.current?.disconnect();
+        
+        // 2. Sauvegarder les éléments importants (comme l'input)
+        const inputArea = contentRef.current.querySelector('.terminal-input-area');
+        
+        // 3. Créer un nouveau div propre
+        const cleanDiv = document.createElement('div');
+        cleanDiv.className = contentRef.current.className;
+        
+        // 4. Réinitialiser tous les états de recherche
+        setSearchText('');
+        setCurrentMatchIndex(0);
+        setTotalMatches(0);
+        
+        // 5. Remplacer le contenu par le div propre
+        if (contentRef.current.parentNode) {
+            contentRef.current.parentNode.replaceChild(cleanDiv, contentRef.current);
+            contentRef.current = cleanDiv;
+        }
+        
+        // 6. Remettre l'input si nécessaire
+        if (inputArea) {
+            cleanDiv.appendChild(inputArea);
+        }
+        
+        // 7. Reconnecter l'observer
+        if (observerRef.current) {
+            observerRef.current.observe(cleanDiv, {
+                childList: true,
+                subtree: true,
+                characterData: true
+            });
+        }
+    };
+
     useImperativeHandle(ref, () => ({
         removeAllHighlights() {
-            // Ne plus rien faire ici car le terminal sera déjà vidé par setHistory([])
             setSearchText('');
             setIsOpen(false);
             setCurrentMatchIndex(0);
             setTotalMatches(0);
-        }
+        },
+        cleanTerminal // Exposer la nouvelle fonction
     }));
 
     useEffect(() => {
