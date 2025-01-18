@@ -155,7 +155,7 @@ function TerminalSearchComponent(
             if (newIndex < 0) newIndex = totalMatches - 1;
         }
 
-        console.log('Navigation:', direction, 'de', currentMatchIndex, 'vers', newIndex); // Debug
+        // console.log('Navigation:', direction, 'de', currentMatchIndex, 'vers', newIndex); // Debug
         setCurrentMatchIndex(newIndex);
         performSearch(searchText, newIndex);
     };
@@ -296,11 +296,10 @@ function TerminalSearchComponent(
                     className="flex-1 border-none outline-none bg-[#1e1e1e] text-gray-200 text-sm"
                     autoFocus={isOpen}
                 />
-                {totalMatches > 0 && (
-                    <span className="text-xs text-gray-400">
-                        {currentMatchIndex + 1} of {totalMatches}
-                    </span>
-                )}
+                {/* Modifier cette partie pour toujours afficher le compteur */}
+                <span className="text-xs text-gray-400">
+                    {searchText ? `${currentMatchIndex + 1}/${totalMatches}` : '0/0'}
+                </span>
                 <div className="flex gap-1">
                     <button
                         onClick={() => navigateToMatch('previous')}

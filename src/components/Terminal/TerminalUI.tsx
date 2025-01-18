@@ -32,6 +32,7 @@ interface TerminalUIProps {
   onFolderSelect?: () => Promise<void>;  // Ajouter cette prop
   observerRef: React.RefObject<MutationObserver | null>;
   contentRef: React.RefObject<HTMLElement | null>;
+  // setHistory: React.Dispatch<React.SetStateAction<any[]>>;
 }
 
 // On reçoit en props tout ce qui est nécessaire pour l’UI (états, handlers, etc.)
@@ -156,7 +157,7 @@ export function TerminalUI(props: TerminalUIProps) {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="bg-transparent border-none hover:bg-white/10 text-[#d4d4d4] hover:text-white h-6 w-6"
+                      className="bg-transparent border-none hover:bg-red-800 text-[#d4d4d4] hover:text-white h-6 w-6"
                       onClick={props.handleKillTerminal}
                     >
                       <Trash2 className="h-4 w-4" />
@@ -244,6 +245,7 @@ export function TerminalUI(props: TerminalUIProps) {
                     <p>Close terminal</p>
                   </TooltipContent>
                 </Tooltip>
+
               </TooltipProvider>
             </div>
           )}
@@ -311,6 +313,38 @@ export function TerminalUI(props: TerminalUIProps) {
                 </div>
                 <div className="flex space-x-2 flex-shrink-0"> 
                   <TooltipProvider delayDuration={50}>
+
+                    {/* Nouveau bouton de nettoyage avec nouvelle approche */}
+                    {/* <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 hover:bg-white/10 hover:text-white"
+                          onClick={() => {  
+                            // 1. Nettoyer le contenu visuel
+                            if (props.contentRef.current) {
+                              props.contentRef.current.innerHTML = '';
+                            }
+                            
+                            // 2. Réinitialiser la recherche si elle existe
+                            if (searchRef.current) {
+                              searchRef.current.removeAllHighlights();
+                            }
+                            
+                            // 3. Vider la commande en cours
+                            props.setCommand('');
+                          }}
+                        >
+                          <Eraser className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent className={tooltipStyle}>
+                        <p>Clear terminal</p>
+                      </TooltipContent>
+                    </Tooltip> */}
+
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button
@@ -328,7 +362,7 @@ export function TerminalUI(props: TerminalUIProps) {
                         align="center"
                         className={`${tooltipStyle} z-50`}
                       >
-                        <p>Clear terminal</p>
+                        <p>old Clear Terminal</p>
                       </TooltipContent>
                     </Tooltip>
 
@@ -363,30 +397,6 @@ export function TerminalUI(props: TerminalUIProps) {
                       </TooltipTrigger>
                       <TooltipContent className={tooltipStyle}>
                         <p>About</p>
-                      </TooltipContent>
-                    </Tooltip>
-
-                    {/* Nouveau bouton de nettoyage avec nouvelle approche */}
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 bg-[#444] hover:bg-red-800 hover:text-white ml-2" // Style différent pour le distinguer
-                          onClick={() => {
-                            if (props.contentRef.current) {
-                              props.contentRef.current.innerHTML = '';
-                            }
-                            props.setHistory([]);
-                            props.setCommand('');
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4" /> {/* Icône différente */}
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent className={tooltipStyle}>
-                        <p>Reset Terminal</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>

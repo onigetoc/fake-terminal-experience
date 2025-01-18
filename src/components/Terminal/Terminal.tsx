@@ -285,10 +285,20 @@ export const Terminal = forwardRef<any, TerminalProps>(({ config: propsConfig },
       if (!command.trim()) continue;
 
       if (command === 'clear' || command === 'cls') {
-        // Simplement vider l'historique et la commande
-        setHistory([]);
+        // Use querySelector to get the terminal content element
+        const terminalContent = document.querySelector('.terminal-scrollbar');
+        
+        // Clear terminal content by removing all child nodes
+        if (terminalContent) {
+          while (terminalContent.firstChild) {
+        terminalContent.removeChild(terminalContent.firstChild);
+          }
+        }
+        
+        // setHistory([]);
         setCommand('');
-        // Réinitialiser la recherche si elle existe
+        
+        // Reset search highlights if they exist
         if (searchRef.current) {
           searchRef.current.removeAllHighlights();
         }
@@ -540,6 +550,7 @@ export const Terminal = forwardRef<any, TerminalProps>(({ config: propsConfig },
       formatOutput={formatOutput} // Passer la fonction formatOutput
       observerRef={observerRef}
       contentRef={contentRef}
+      setHistory={setHistory}
     />
   );
 });
