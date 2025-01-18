@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import {
-  Trash2, FolderOpen, Plus, Minus, Maximize2, Minimize2, X, Terminal as TerminalIcon,
+  BadgeX, FolderOpen, Plus, Minus, Maximize2, Minimize2, X, Terminal as TerminalIcon,
   Loader2, Eraser, HelpCircle, Info,
 } from 'lucide-react';
 import TerminalSearch from './terminalAddons.tsx';
@@ -160,7 +160,7 @@ export function TerminalUI(props: TerminalUIProps) {
                       className="bg-transparent border-none hover:bg-red-800 text-[#d4d4d4] hover:text-white h-6 w-6"
                       onClick={props.handleKillTerminal}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <BadgeX className="h-4 w-4" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="top" className={tooltipStyle}>

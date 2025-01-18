@@ -21,6 +21,34 @@ function removeHighlightMarks(html: string) {
 function highlightText(node: Node, searchText: string, currentIndex: number, matchIndexRef: { current: number }): void {
     if (!searchText) return;
 
+    // Préserver les liens existants
+    if (node.nodeType === Node.ELEMENT_NODE && (node as Element).tagName === 'A') {
+        // Sauvegarder le contenu et les attributs du lien
+        const link = node as HTMLAnchorElement;
+        const href = link.href;
+        const isTerminalLink = link.classList.contains('terminal-link');
+        
+        // Traiter le texte à l'intérieur du lien
+        const textContent = link.textContent || '';
+        const regex = new RegExp(escapeRegExp(searchText), 'gi');
+        const newHtml = textContent.replace(regex, (match) => {
+            matchIndexRef.current++;
+            const isCurrentMatch = matchIndexRef.current - 1 === currentIndex;
+            return `<mark class="terminal-search-highlight ${isCurrentMatch ? 'terminal-search-current' : ''}">${match}</mark>`;
+        });
+
+        // Recréer le lien avec le texte surligné
+        link.innerHTML = newHtml;
+        
+        // Réappliquer le comportement d'ouverture dans un nouvel onglet
+        link.onclick = (e) => {
+            e.preventDefault();
+            window.open(href, '_blank', 'noopener,noreferrer');
+        };
+        
+        return;
+    }
+
     // Vérifie si le nœud est dans la zone de sortie (terminal-output) et pas dans une commande
     const isInCommand = node.parentElement?.closest('.terminal-command');
     const isInOutput = node.parentElement?.closest('.terminal-output');
