@@ -5,9 +5,6 @@ import { X, Minus, Maximize2, Terminal as TerminalIcon, Trash2, Plus, Loader2, H
 import { useToast } from "@/components/ui/use-toast";
 import '../../styles/terminal.css';
 import { executeRemoteCommand } from '../../services/terminalApi';
-// import { isCustomCommand, executeCustomCommand } from '../../services/customCommands';
-// import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-// import { getFullPath } from "../../utils/pathUtils";
 import { translateCommand, shouldTranslateCommand } from '../../utils/osCommands';
 import { terminalConfig, TerminalConfig } from '@/config/terminalConfig'; // Importer le type TerminalConfig
 import { TerminalUI } from './TerminalUI';
@@ -278,12 +275,31 @@ export const Terminal = forwardRef<any, TerminalProps>(({ config: propsConfig },
     };
   }, []);
 
-  const executeCommand = async (cmd: string | string[], displayInTerminal: number = 1) => {
+  // Ajouter un AbortController pour gérer les commandes en cours
+  const currentCommandController = useRef<AbortController | null>(null);
+
+  // Ajouter la file de commandes et l'état d'exécution
+  const commandQueue = useRef<Array<{ cmd: string | string[], displayInTerminal: number }>>([]);
+  const [isCommandRunning, setIsCommandRunning] = useState(false);
+
+  function runNextCommandInQueue() {
+    if (commandQueue.current.length === 0) {
+      setIsCommandRunning(false);
+      return;
+    }
+    // Récupérer la prochaine commande en file
+    const { cmd, displayInTerminal } = commandQueue.current.shift()!;
+    runCommand(cmd, displayInTerminal);
+  }
+
+  // Extraire la logique d'exécution dans une fonction
+  async function runCommand(cmd: string | string[], displayInTerminal: number) {
+    setIsCommandRunning(true);
+
     const commands = Array.isArray(cmd) ? cmd : [cmd];
 
     for (const command of commands) {
       if (!command.trim()) continue;
-
       if (command === 'clear' || command === 'cls') {
         // Use querySelector to get the terminal content element
         const terminalContent = document.querySelector('.terminal-scrollbar');
@@ -330,6 +346,10 @@ export const Terminal = forwardRef<any, TerminalProps>(({ config: propsConfig },
           });
         }
       } catch (error) {
+        if (error.name === 'AbortError') {
+          console.log('Command was killed');
+          return;
+        }
         console.error('Error executing command:', error);
         
         if (displayInTerminal === 1) {
@@ -350,6 +370,20 @@ export const Terminal = forwardRef<any, TerminalProps>(({ config: propsConfig },
           });
         }
       }
+    }
+
+    // Quand c'est fini, lancer la prochaine commande
+    runNextCommandInQueue();
+  }
+
+  // Modifier la fonction executeCommand pour gérer la file
+  const executeCommand = async (cmd: string | string[], displayInTerminal: number = 1) => {
+    if (isCommandRunning) {
+      // Placer dans la file si commande en cours
+      commandQueue.current.push({ cmd, displayInTerminal });
+    } else {
+      // Lancer directement si aucune commande en cours
+      runCommand(cmd, displayInTerminal);
     }
   };
 
@@ -479,13 +513,31 @@ export const Terminal = forwardRef<any, TerminalProps>(({ config: propsConfig },
 
   // Mise à jour de la fonction handleKillTerminal
   const handleKillTerminal = () => {
-    // Effacer l'historique et la commande en cours
-    setHistory([{
-      command: '',
-      output: '\x1b[31mProcess terminated.\x1b[0m',  // En rouge avec ANSI
-      isLoading: false
-    }]);
-    setCommand('');
+    try {
+      // 1. Annuler la commande en cours
+      if (currentCommandController.current) {
+        currentCommandController.current.abort();
+        currentCommandController.current = null;
+      }
+
+      // 2. Ne pas manipuler directement le DOM, utiliser setState à la place
+      setHistory([{
+        command: '',
+        output: '\x1b[31mProcess terminated. All running commands have been killed.\x1b[0m',
+        isLoading: false
+      }]);
+      
+      // 3. Réinitialiser les autres états
+      setCommand('');
+      
+      // 4. Réinitialiser la recherche si elle existe
+      if (searchRef.current?.removeAllHighlights) {
+        searchRef.current.removeAllHighlights();
+      }
+      
+    } catch (error) {
+      console.error('Error killing terminal:', error);
+    }
   };
 
   // Effet pour suivre les changements de configuration

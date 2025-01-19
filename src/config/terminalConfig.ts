@@ -41,6 +41,7 @@ export const defaultConfig: TerminalConfig = {
     showPath: true,
     maxOutputLength: 1000,
     scrollbackLimit: 1000,
+    promptString: '$ ',
 };
 
 // Configuration utility

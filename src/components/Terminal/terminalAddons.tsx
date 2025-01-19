@@ -326,7 +326,9 @@ function TerminalSearchComponent(
                 />
                 {/* Modifier cette partie pour toujours afficher le compteur */}
                 <span className="text-xs text-gray-400">
-                    {searchText ? `${currentMatchIndex + 1}/${totalMatches}` : '0/0'}
+                    {searchText && totalMatches > 0
+                        ? `${currentMatchIndex + 1}/${totalMatches}`
+                        : '0/0'}
                 </span>
                 <div className="flex gap-1">
                     <button

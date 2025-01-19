@@ -6,7 +6,7 @@ interface CommandResponse {
   newCwd?: string;
 }
 
-export async function executeRemoteCommand(command: string): Promise<CommandResponse> {
+export async function executeRemoteCommand(command: string, signal?: AbortSignal): Promise<CommandResponse> {
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 60000);
@@ -17,7 +17,7 @@ export async function executeRemoteCommand(command: string): Promise<CommandResp
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ command }),
-      signal: controller.signal,
+      signal: signal || controller.signal,
     });
 
     clearTimeout(timeoutId);

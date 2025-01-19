@@ -362,7 +362,7 @@ export function TerminalUI(props: TerminalUIProps) {
                         align="center"
                         className={`${tooltipStyle} z-50`}
                       >
-                        <p>old Clear Terminal</p>
+                        <p>Clear Terminal</p>
                       </TooltipContent>
                     </Tooltip>
 

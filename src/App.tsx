@@ -16,7 +16,6 @@ const App = () => {
       showTerminal: true,
       readOnlyMode: false,
       fontSize: 14,        // Configuration globale du fontSize
-      promptString: '$ ',
       // Nous ne définissons pas startMinimized ici, utilisons la valeur par défaut
     });
   }, []);
