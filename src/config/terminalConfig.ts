@@ -11,7 +11,7 @@ export type TerminalConfig = {
   theme: 'dark' | 'light' | 'system';
   fontSize: number;
   fontFamily: string;
-  promptString: string;
+  // promptString: string;
   showPath: boolean;
   maxOutputLength: number;
   scrollbackLimit: number;
@@ -41,7 +41,6 @@ export const defaultConfig: TerminalConfig = {
     showPath: true,
     maxOutputLength: 1000,
     scrollbackLimit: 1000,
-    promptString: '$ ',
 };
 
 // Configuration utility

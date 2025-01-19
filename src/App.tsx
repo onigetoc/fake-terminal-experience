@@ -15,8 +15,7 @@ const App = () => {
     terminalConfig.set({
       showTerminal: true,
       readOnlyMode: false,
-      fontSize: 14,        // Configuration globale du fontSize
-      // Nous ne définissons pas startMinimized ici, utilisons la valeur par défaut
+      fontSize: 14, 
     });
   }, []);
 

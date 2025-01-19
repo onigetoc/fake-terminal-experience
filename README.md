@@ -195,6 +195,43 @@ You can customize the terminal by modifying the following files:
 - `src/config/terminal.config.ts` - Terminal settings
 - `src/themes/` - Terminal themes and styles
 
+### Customizing the Terminal
+
+The `terminalConfig.ts` file allows you to customize various aspects of the terminal. Here are the available options:
+
+| Option                | Type      | Default Value | Description                                      |
+|-----------------------|-----------|---------------|--------------------------------------------------|
+| initialState          | string    | 'open'        | Initial state of the terminal ('open', 'minimized', 'hidden') |
+| startFullscreen       | boolean   | false         | Start in fullscreen mode                         |
+| startMinimized        | boolean   | false         | Start in minimized mode                          |
+| defaultHeight         | number    | 320           | Default height of the terminal window            |
+| minHeight             | number    | 200           | Minimum height of the terminal window            |
+| minWidth              | number    | 300           | Minimum width of the terminal window             |
+| showExecutedCommands  | boolean   | true          | Show executed commands in the terminal           |
+| keepCommandHistory    | boolean   | true          | Keep command history                             |
+| maxHistoryLength      | number    | 100           | Maximum length of command history                |
+| theme                 | string    | 'dark'        | 'dark', 'light', or custom theme name            |
+| fontSize              | number    | 14            | Font size in the terminal                        |
+| fontFamily            | string    | 'monospace'   | Font family in the terminal                      |
+| readOnlyMode          | boolean   | false         | If true, disables input in the terminal          |
+| showTerminal          | boolean   | true          | If false, hides the terminal completely          |
+| showFloatingButton    | boolean   | true          | Show floating button to open terminal            |
+| showPath              | boolean   | true          | Show current path in the terminal                |
+| maxOutputLength       | number    | 1000          | Maximum length of terminal output                |
+| scrollbackLimit       | number    | 1000          | Scrollback limit in the terminal                 |
+
+You can modify these options to fit your needs. For example, to start the terminal in minimized mode with a custom prompt symbol, you can update the configuration as follows:
+
+```typescript
+import { terminalConfig } from '@/config/terminalConfig';
+
+terminalConfig.set({
+  initialState: 'minimized',
+  promptSymbol: '$',
+  // Other configurations...
+});
+```
+
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
@@ -202,8 +239,6 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
-
-
 
 ## TODO
 - Add search in terminal
