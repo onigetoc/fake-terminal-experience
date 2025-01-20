@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
-import TerminalSearch from './terminalAddons'; // Importer le composant de recherche
 import { Button } from "@/components/ui/button";
 import { X, Minus, Maximize2, Terminal as TerminalIcon, Trash2, Plus, Loader2, HelpCircle, Eraser, Info, FolderOpen, Minimize2 } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
@@ -14,9 +13,6 @@ interface TerminalOutput {
   output: string;
   isLoading?: boolean;  // Ajout d'un flag de chargement par commande
 }
-
-// REGEXT PATH:
-// (?<opening>\b(?<montage>[a-zA-Z]:[\/\\])|[\/\\][\/\\](?<!http:\/\/)(?<!https:\/\/)(?>[?.][\/\\](?:[^\/\\<>:"|?\n\r ]+[\/\\])?(?&montage)?|(?!(?&montage)))|%\w+%[\/\\]?)(?:[^\/\\<>:"|?\n\r ,'][^\/\\<>:"|?\n\r]*(?<![ ,'])[\/\\])*(?:(?=[^\/\\<>:"'|?\n\r;, ])(?:(?:[^\/\\<>:"|?\n\r;, .](?: (?=[\w\-]))?(?:\*(?!= ))?(?!(?&montage)))+)?(?:\.\w+)*)|(?:'(?&opening)(?=.*'\W|.*'$)(?:[^\/\\<>:'"|?\n\r]+(?:'(?=\w))?[\/\\]?)*')|"(?&opening)(?=.*")(?:[^\/\\<>:"|?\n\r]+[\/\\]?)*"
 
 const formatTextWithLinks = (text: string) => {
   const urlRegex = /(https?:\/\/[^\s]+)/g;
@@ -182,6 +178,14 @@ export const Terminal = forwardRef<any, TerminalProps>(({ config: propsConfig },
   useEffect(() => {
     const initializeDirectory = async () => {
       try {
+        console.log('Initializing directory...'); // Ajoutez ce message pour confirmer l'appel de la fonction
+
+        // Au lieu d'utiliser os.homedir(), on peut :
+        // 1. Soit utiliser une API backend pour obtenir cette information
+        // 2. Soit utiliser une valeur par défaut selon l'OS
+        const userHome = osInfo === 'Windows' ? 'C:\\Users\\' : '/home/';
+        console.log('User home directory:', userHome);
+        
         const { stdout, newCwd } = await executeRemoteCommand('pwd');
         if (newCwd) {
           setCurrentDirectory(newCwd);

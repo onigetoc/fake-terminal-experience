@@ -1,8 +1,25 @@
-# Fake Terminal Experience
+# TerminalX Experience
 
-A React-based terminal emulator that provides a realistic command-line interface experience in the browser.
+A powerful React-based web-based terminal emulator that provides both visual terminal interface and server-side command execution capabilities. This project creates an immersive command-line environment directly in your browser, combining the flexibility of a virtual terminal with real server interactions.
 
 ## Features
+
+Key capabilities:
+- Full terminal emulation in browser
+- Real command execution via server integration
+- Cross-platform command translation
+- Rich terminal UI with window controls
+- Command history and autocompletion
+- Customizable themes and configurations
+
+Perfect for:
+- Web-based development environments
+- Remote system administration
+- Educational platforms
+- Command-line training
+- Cloud-based terminal access
+
+React-based terminal emulator that provides a realistic command-line interface experience in the browser.
 
 - Realistic terminal UI with common terminal features
 - Draggable/resizable terminal window
@@ -201,7 +218,8 @@ The `terminalConfig.ts` file allows you to customize various aspects of the term
 
 | Option                | Type      | Default Value | Description                                      |
 |-----------------------|-----------|---------------|--------------------------------------------------|
-| initialState          | string    | 'open'        | Initial state of the terminal ('open', 'minimized', 'hidden') |
+| initialState          | string    | 'open'        | Terminal initial state ('open', 'minimized', 'hidden') |
+| readOnlyMode          | boolean   | false         | If true, disables input and all user interactions with the terminal |
 | startFullscreen       | boolean   | false         | Start in fullscreen mode                         |
 | startMinimized        | boolean   | false         | Start in minimized mode                          |
 | defaultHeight         | number    | 320           | Default height of the terminal window            |
@@ -213,7 +231,6 @@ The `terminalConfig.ts` file allows you to customize various aspects of the term
 | theme                 | string    | 'dark'        | 'dark', 'light', or custom theme name            |
 | fontSize              | number    | 14            | Font size in the terminal                        |
 | fontFamily            | string    | 'monospace'   | Font family in the terminal                      |
-| readOnlyMode          | boolean   | false         | If true, disables input in the terminal          |
 | showTerminal          | boolean   | true          | If false, hides the terminal completely          |
 | showFloatingButton    | boolean   | true          | Show floating button to open terminal            |
 | showPath              | boolean   | true          | Show current path in the terminal                |
@@ -226,8 +243,8 @@ You can modify these options to fit your needs. For example, to start the termin
 import { terminalConfig } from '@/config/terminalConfig';
 
 terminalConfig.set({
-  initialState: 'minimized',
-  promptSymbol: '$',
+  readOnlyMode: true, // If true, disables input and all user interactions with the terminal 
+  fontSize: 15,   
   // Other configurations...
 });
 ```

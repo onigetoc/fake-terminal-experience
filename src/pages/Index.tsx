@@ -1,8 +1,8 @@
 import Terminal from "@/components/Terminal/Terminal";
+// import { terminalConfig } from '@/config/terminalConfig';
 import { Button } from "@/components/ui/button";
 import { useRef } from "react";
 import { Play, Terminal as TerminalIcon, Globe, TrendingUp } from "lucide-react";
-import { terminalConfig } from '@/config/terminalConfig';
 
 const Index = () => {
   const terminalRef = useRef<{
@@ -77,7 +77,7 @@ const Index = () => {
           </Button>
           <Button
             variant="outline"
-            onClick={() => executeCommand(['open "https://www.google.com/search?q=fake+terminal"'])}
+            onClick={() => executeCommand('open "https://www.google.com/search?q=fake+terminal"')}
             className="flex items-center gap-2 border-gray-500"  // Voici la bonne classe Tailwind
           >
             <Globe className="h-4 w-4" />
@@ -93,7 +93,7 @@ const Index = () => {
           </Button>
           <Button
             variant="outline"
-            onClick={() => executeCommand(['tree /f'])}
+            onClick={() => executeCommand('tree /f')}
             className="flex items-center gap-2 border-gray-500"  // Voici la bonne classe Tailwind
           >
             <TerminalIcon className="h-4 w-4" />
@@ -101,7 +101,7 @@ const Index = () => {
           </Button>
           <Button
             variant="outline"
-            onClick={() => executeCommand(['wmic product get name'])}
+            onClick={() => executeCommand('wmic product get name')}
             className="flex items-center gap-2 border-gray-500"  // Voici la bonne classe Tailwind
           >
             <TerminalIcon className="h-4 w-4" />
@@ -122,7 +122,7 @@ const Index = () => {
         ref={terminalRef}
         config={{
           initialState: 'open',
-          defaultHeight: 300,
+          defaultHeight: 320,
         }} 
       />
     </div>

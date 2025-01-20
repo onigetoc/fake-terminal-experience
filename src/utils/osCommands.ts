@@ -150,6 +150,7 @@ export const commandMap: CommandMapping = {
 };
 
 export function getOsType(): OsType {
+
   const userAgent = window.navigator.userAgent.toLowerCase();
   if (userAgent.includes('win')) return 'windows';
   if (userAgent.includes('mac')) return 'macos';

@@ -11,10 +11,11 @@ const queryClient = new QueryClient();
 
 const App = () => {
   useEffect(() => {
-    // Configuration globale
+    // Global Configuration
     terminalConfig.set({
       showTerminal: true,
       readOnlyMode: false,
+      // defaultHeight: 600,
       fontSize: 14, 
     });
   }, []);
