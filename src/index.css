@@ -2,6 +2,21 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Ajouter les classes personnalisées */
+@layer components {
+  .bg-background {
+    background-color: #1e1e1e; /* Remplacez par la couleur souhaitée */
+  }
+
+  .border-border {
+    border-color: #d4d4d4; /* Assurez-vous que cette classe est définie comme auparavant */
+  }
+
+  .text-foreground {
+    color: #d4d4d4; /* Remplacez par la couleur souhaitée */
+  }
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;

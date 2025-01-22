@@ -228,9 +228,19 @@ function TerminalSearchComponent(
     // Ajouter un effet pour gérer le focus quand isOpen change
     useEffect(() => {
         if (isOpen) {
-            inputRef.current?.focus();
+            // Sélectionner tout le texte quand la recherche s'ouvre
+            setTimeout(() => {
+                if (inputRef.current) {
+                    inputRef.current.select();
+                }
+            }, 0);
         }
     }, [isOpen]);
+
+    // Ajouter un gestionnaire onFocus pour toujours sélectionner le texte
+    const handleFocus = () => {
+        inputRef.current?.select();
+    };
 
     const handleClose = () => {
         setIsOpen(false);
@@ -319,7 +329,7 @@ function TerminalSearchComponent(
                     type="text"
                     value={searchText}
                     onChange={(e) => setSearchText(e.target.value)}
-                    // Supprimer le gestionnaire onKeyDown ici puisqu'il est géré dans l'effet au-dessus
+                    onFocus={handleFocus} // Ajouter le gestionnaire onFocus
                     placeholder="Find in terminal"
                     className="flex-1 border-none outline-none bg-[#1e1e1e] text-gray-200 text-sm"
                     autoFocus={isOpen}

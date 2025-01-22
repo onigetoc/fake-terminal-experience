@@ -10,7 +10,8 @@
     "frontend": "vite --port 5173",
     "server": "tsx watch src/server/index.ts",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.0",

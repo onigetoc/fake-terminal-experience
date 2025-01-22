@@ -1,6 +1,6 @@
 // Terminal configuration type
 export type TerminalConfig = {
-  initialState: 'open' | 'closed' | 'hidden';  // Remplace showTerminal et startClosed
+  initialState: 'open' | 'closed' | 'hidden';
   startFullscreen: boolean;
   defaultHeight: number;
   minHeight: number;
@@ -11,36 +11,34 @@ export type TerminalConfig = {
   theme: 'dark' | 'light' | 'system';
   fontSize: number;
   fontFamily: string;
-  // promptString: string;
   showPath: boolean;
   maxOutputLength: number;
   scrollbackLimit: number;
-  startMinimized: boolean;  // Ajout de la nouvelle option
-  showFloatingButton: boolean;  // Nouvelle option
-  showTerminal: boolean;         // Nouvelle option pour contrôler la visibilité
-  readOnlyMode: boolean;  // Nouvelle option
+  startMinimized: boolean;
+  showFloatingButton: boolean;
+  showTerminal: boolean;
+  readOnlyMode: boolean;
 };
 
 export const defaultConfig: TerminalConfig = {
-    initialState: 'open',  // open by default. OPTIONS: 'open' | 'closed' | 'hidden'
-    readOnlyMode: false,    // Par défaut, terminal interactif complet
-    startFullscreen: false,
-    showFloatingButton: true,  // Par défaut, on montre le bouton flottant
-    showTerminal: true,         // Valeur par défaut pour contrôler la visibilité
-    startMinimized: false,    // Valeur par défaut globale
-    defaultHeight: 320,
-    minHeight: 200,
-    minWidth: 300,  // Valeur par défaut pour la largeur minimale
-    showExecutedCommands: true,
-    keepCommandHistory: true,
-    maxHistoryLength: 100,
-    theme: 'dark',
-    fontSize: 14,
-    fontFamily: 'monospace',
-    // promptString: '$ ', // ⌘ // % // $ // >
-    showPath: true,
-    maxOutputLength: 1000,
-    scrollbackLimit: 1000,
+  initialState: 'open',
+  readOnlyMode: false,
+  startFullscreen: false,
+  showFloatingButton: true,
+  showTerminal: true,
+  startMinimized: false,
+  defaultHeight: 320,
+  minHeight: 200,
+  minWidth: 300,
+  showExecutedCommands: true,
+  keepCommandHistory: true,
+  maxHistoryLength: 100,
+  theme: 'dark',
+  fontSize: 14,
+  fontFamily: 'monospace',
+  showPath: true,
+  maxOutputLength: 1000,
+  scrollbackLimit: 1000,
 };
 
 // Configuration utility

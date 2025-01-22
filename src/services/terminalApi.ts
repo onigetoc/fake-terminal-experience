@@ -6,7 +6,10 @@ interface CommandResponse {
   newCwd?: string;
 }
 
-export async function executeRemoteCommand(command: string, signal?: AbortSignal): Promise<CommandResponse> {
+export const executeRemoteCommand = async (
+  command: string,
+  signal?: AbortSignal
+): Promise<CommandResponse> => {
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 60000);
@@ -23,18 +26,15 @@ export async function executeRemoteCommand(command: string, signal?: AbortSignal
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || 'Network response was not ok');
+      throw new Error('Network response was not ok');
     }
 
-    return await response.json();
+    const data: CommandResponse = await response.json();
+    return data;
   } catch (error) {
-    if (error instanceof Error) {
-      if (error.name === 'AbortError') {
-        throw new Error('Command execution timed out');
-      }
-      throw error;
+    if ((error as any).name === 'AbortError') {
+      throw new Error('Command execution timed out');
     }
-    throw new Error('Unknown error occurred');
+    throw error;
   }
 }

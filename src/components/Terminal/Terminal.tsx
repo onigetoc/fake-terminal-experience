@@ -7,6 +7,9 @@ import { executeRemoteCommand } from '../../services/terminalApi';
 import { translateCommand, shouldTranslateCommand } from '../../utils/osCommands';
 import { terminalConfig, TerminalConfig } from '@/config/terminalConfig'; // Importer le type TerminalConfig
 import { TerminalUI } from './TerminalUI';
+import { setTerminalExecutor } from '@/utils/terminalUtils'; // Ajouter cette ligne
+
+// Assurez-vous qu'il n'y a aucune utilisation de TerminalContext
 
 interface TerminalOutput {
   command: string;
@@ -282,8 +285,15 @@ export const Terminal = forwardRef<any, TerminalProps>(({ config: propsConfig },
   // Ajouter un AbortController pour gérer les commandes en cours
   const currentCommandController = useRef<AbortController | null>(null);
 
+  // Modifier la structure de la queue pour inclure resolve/reject
+  const commandQueue = useRef<Array<{
+    cmd: string | string[],
+    displayInTerminal: number,
+    resolve: () => void,
+    reject: (err: Error) => void
+  }>>([]);
+
   // Ajouter la file de commandes et l'état d'exécution
-  const commandQueue = useRef<Array<{ cmd: string | string[], displayInTerminal: number }>>([]);
   const [isCommandRunning, setIsCommandRunning] = useState(false);
 
   function runNextCommandInQueue() {
@@ -291,13 +301,12 @@ export const Terminal = forwardRef<any, TerminalProps>(({ config: propsConfig },
       setIsCommandRunning(false);
       return;
     }
-    // Récupérer la prochaine commande en file
-    const { cmd, displayInTerminal } = commandQueue.current.shift()!;
-    runCommand(cmd, displayInTerminal);
+    const { cmd, displayInTerminal, resolve, reject } = commandQueue.current.shift()!;
+    runCommand(cmd, displayInTerminal, resolve, reject);
   }
 
   // Extraire la logique d'exécution dans une fonction
-  async function runCommand(cmd: string | string[], displayInTerminal: number) {
+  async function runCommand(cmd: string | string[], displayInTerminal: number, resolve: () => void, reject: (err: Error) => void) {
     setIsCommandRunning(true);
 
     const commands = Array.isArray(cmd) ? cmd : [cmd];
@@ -373,28 +382,37 @@ export const Terminal = forwardRef<any, TerminalProps>(({ config: propsConfig },
             description: error instanceof Error ? error.message : 'Unknown error occurred',
           });
         }
+        reject(error instanceof Error ? error : new Error(String(error)));
       }
     }
 
     // Quand c'est fini, lancer la prochaine commande
+    resolve();
     runNextCommandInQueue();
   }
 
   // Modifier la fonction executeCommand pour gérer la file
-  const executeCommand = async (cmd: string | string[], displayInTerminal: number = 1) => {
-    if (isCommandRunning) {
-      // Placer dans la file si commande en cours
-      commandQueue.current.push({ cmd, displayInTerminal });
-    } else {
-      // Lancer directement si aucune commande en cours
-      runCommand(cmd, displayInTerminal);
-    }
+  const executeCommand = (cmd: string | string[], displayInTerminal: number = 1): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      commandQueue.current.push({ cmd, displayInTerminal, resolve, reject });
+      if (!isCommandRunning) {
+        runNextCommandInQueue();
+      }
+    });
   };
 
   // Exposer executeCommand via la ref
   useImperativeHandle(ref, () => ({
     executeCommand
   }));
+
+  // Initialiser l'exécuteur global au montage du composant
+  useEffect(() => {
+    if (typeof setTerminalExecutor === 'function') {
+      setTerminalExecutor(executeCommand);
+      return () => setTerminalExecutor(null);
+    }
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -560,55 +578,106 @@ export const Terminal = forwardRef<any, TerminalProps>(({ config: propsConfig },
     return () => clearInterval(interval);
   }, [propsConfig]); // Ajouter propsConfig comme dépendance
 
-  // Si le terminal n'est pas visible du tout (mode caché)
-  if (!isVisible) return null;
+  // Déplacer ces effets avant les conditions de retour
+  useEffect(() => {
+    setTerminalExecutor(executeCommand);
+    return () => setTerminalExecutor(null);
+  }, []);
 
-  // Modifier cette condition pour montrer le bouton flottant
-  // quand le terminal est fermé ET que initialState n'est pas 'hidden'
-  if (!isOpen && mergedConfig.initialState !== 'hidden') {
+  // Modifier pour préserver l'état
+  const [terminalState] = useState(() => ({
+    history: [],
+    searchState: null
+  }));
+
+  // Ajouter un effet pour la persistance du state
+  useEffect(() => {
+    if (!isOpen) {
+      // Sauvegarder l'état actuel
+      terminalState.history = history;
+    } else {
+      // Restaurer l'état au remontage
+      if (terminalState.history.length > 0) {
+        setHistory(terminalState.history);
+      }
+    }
+  }, [isOpen]);
+
+  // Modifier pour réinitialiser correctement l'observer
+  useEffect(() => {
+    if (isOpen) {
+      // Attendre le prochain tick pour que le DOM soit mis à jour
+      setTimeout(() => {
+        contentRef.current = document.querySelector('.terminal-scrollbar');
+        if (contentRef.current) {
+          observerRef.current?.disconnect();
+          observerRef.current = new MutationObserver(() => {
+            // La logique du search
+          });
+          observerRef.current.observe(contentRef.current, {
+            childList: true,
+            subtree: true,
+            characterData: true
+          });
+        }
+      }, 0);
+    }
+
+    return () => {
+      observerRef.current?.disconnect();
+    };
+  }, [isOpen]);
+
+  // Modifier cette partie pour ne pas retourner trop tôt
+  const renderContent = () => {
+    if (!isVisible) return null;
+
+    if (!isOpen && mergedConfig.initialState !== 'hidden') {
+      return (
+        <Button
+          className="fixed bottom-4 right-4 bg-[#1e1e1e] text-white floating-button"
+          onClick={() => setIsOpen(true)}
+        >
+          <TerminalIcon className="w-4 h-4 mr-2" />
+          Open Terminal
+        </Button>
+      );
+    }
+
+    if (!isOpen) return null;
+
     return (
-      <Button
-        className="fixed bottom-4 right-4 bg-[#1e1e1e] text-white floating-button"
-        onClick={() => setIsOpen(true)}
-      >
-        <TerminalIcon className="w-4 h-4 mr-2" />
-        Open Terminal
-      </Button>
+      <TerminalUI
+        isOpen={isOpen}
+        isFullscreen={isFullscreen}
+        isMinimized={isMinimized}
+        height={height}
+        isDragging={isDragging}
+        currentDirectory={currentDirectory}
+        osInfo={osInfo}
+        history={history}
+        command={command}
+        terminalRef={terminalRef}
+        handleMouseDown={handleMouseDown}
+        handleKillTerminal={handleKillTerminal}
+        setIsOpen={setIsOpen}
+        setIsMinimized={setIsMinimized}
+        setIsFullscreen={setIsFullscreen}
+        handleSubmit={handleSubmit}
+        setCommand={setCommand}
+        executeCommand={executeCommand}
+        mergedConfig={mergedConfig}
+        formatCommand={formatCommand}
+        formatOutput={formatOutput}
+        observerRef={observerRef}
+        contentRef={contentRef}
+        setHistory={setHistory}
+      />
     );
-  }
+  };
 
-  // Si le terminal est fermé et showFloatingButton est false, ne rien rendre
-  if (!isOpen) return null;
-
-  // Rendu : remplacer l'énorme bloc UI par le composant TerminalUI
-  return (
-    <TerminalUI
-      isOpen={isOpen}
-      isFullscreen={isFullscreen}
-      isMinimized={isMinimized}
-      height={height}
-      isDragging={isDragging}
-      currentDirectory={currentDirectory}
-      osInfo={osInfo}
-      history={history}
-      command={command}
-      terminalRef={terminalRef}
-      handleMouseDown={handleMouseDown}
-      handleKillTerminal={handleKillTerminal}
-      setIsOpen={setIsOpen}
-      setIsMinimized={setIsMinimized}
-      setIsFullscreen={setIsFullscreen}
-      handleSubmit={handleSubmit}
-      setCommand={setCommand}
-      executeCommand={executeCommand}
-      mergedConfig={mergedConfig}
-      formatCommand={formatCommand} // Passer la fonction formatCommand
-      formatOutput={formatOutput} // Passer la fonction formatOutput
-      observerRef={observerRef}
-      contentRef={contentRef}
-      setHistory={setHistory}
-    />
-  );
+  // Retourner le contenu rendu
+  return renderContent();
 });
 
 Terminal.displayName = 'Terminal';

@@ -13,6 +13,7 @@ Create a React-based terminal emulator that provides a realistic command-line in
 - Simulate custom command output
 - Allow for configurable prompt and theme
 - Implement copy/paste support
+- Very simple code usage for the user you want to use our Terminal in is project who execute command from the terminal and outside the terminal with the function executeCommand
 
 ## Code Style and Structure
 - Write concise, technical JavaScript code with accurate examples

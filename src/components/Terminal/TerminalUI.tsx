@@ -121,6 +121,7 @@ export function TerminalUI(props: TerminalUIProps) {
         }
       }}
     >
+      {/* Déplacer TerminalSearch en dehors de la condition isOpen */}
       <TerminalSearch 
         ref={searchRef}
         isTerminalFocused={isTerminalFocused} 

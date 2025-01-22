@@ -4,22 +4,11 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { terminalConfig } from './config/terminalConfig';
 import Index from "./pages/Index";
 
 const queryClient = new QueryClient();
 
 const App = () => {
-  useEffect(() => {
-    // Global Configuration
-    terminalConfig.set({
-      showTerminal: true,
-      readOnlyMode: false,
-      // defaultHeight: 600,
-      fontSize: 14, 
-    });
-  }, []);
-
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>

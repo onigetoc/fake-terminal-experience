@@ -1,20 +1,10 @@
 import Terminal from "@/components/Terminal/Terminal";
-// import { terminalConfig } from '@/config/terminalConfig';
+import { terminalConfig } from '@/config/terminalConfig';
 import { Button } from "@/components/ui/button";
-import { useRef } from "react";
-import { Play, Terminal as TerminalIcon, Globe, TrendingUp } from "lucide-react";
+import { Play, Terminal as TerminalIcon, Globe } from "lucide-react";
+import { executeCommand } from "@/utils/terminalUtils"; // Assurez-vous que cette fonction est importée
 
 const Index = () => {
-  const terminalRef = useRef<{
-    executeCommand: (cmd: string | string[], displayInTerminal?: number) => void;
-  }>(null);
-
-  const executeCommand = (command: string | string[], displayInTerminal: number = 1) => {
-    if (terminalRef.current) {
-      terminalRef.current.executeCommand(command, displayInTerminal);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto p-4">
@@ -24,7 +14,7 @@ const Index = () => {
         </p>
 
         <p className="text-lg text-muted-foreground mb-2">
-          Launch terminal commands from anywhere (fronend) in your app using:
+          Launch terminal commands from anywhere (frontend) in your app using:
         </p>
 
         <p>start C:\Users\LENOVO\Videos\Advanced-Promp-Generator-v3</p>
@@ -61,7 +51,11 @@ const Index = () => {
         <div className="flex flex-wrap gap-2 mb-8">  {/* Ajout de flex-wrap ici */}
           <Button
             variant="outline"
-            onClick={() => executeCommand("npm -v")} // Par défaut displayInTerminal = 1
+            onClick={() => {
+              executeCommand(['cd test', 'type todo.txt', 'echo hello'])
+                .then(() => console.log("Commande terminée"))
+                .catch((err) => console.error("Erreur:", err));
+            }}
             className="flex items-center gap-2 border-gray-500"  // Voici la bonne classe Tailwind
           >
             <Play className="h-4 w-4" />
@@ -107,6 +101,23 @@ const Index = () => {
             <TerminalIcon className="h-4 w-4" />
             Programs installed on your PC
           </Button>
+          {/* Ajout du bouton pour exécuter les commandes Git */}
+          <Button
+            variant="outline"
+            onClick={() => {
+              executeCommand([
+                'git add .',
+                'git commit -m "update terminal functionality"',
+                'git push origin main'
+              ])
+                .then(() => console.log("Commit et push terminés"))
+                .catch((err) => console.error("Erreur:", err));
+            }}
+            className="flex items-center gap-2 border-gray-500"  // Voici la bonne classe Tailwind
+          >
+            <TerminalIcon className="h-4 w-4" />
+            Commit & Push
+          </Button>
           {/* Ajout du bouton de test */}
           <Button
             variant="outline"
@@ -119,8 +130,8 @@ const Index = () => {
         </div>
       </div>
       <Terminal 
-        ref={terminalRef}
         config={{
+          readOnlyMode: false,
           initialState: 'open',
           defaultHeight: 320,
         }} 
