@@ -16,10 +16,8 @@ const Index = () => {
         <p className="text-lg text-muted-foreground mb-2">
           Launch terminal commands from anywhere (frontend) in your app using:
         </p>
-
-        <p>start C:\Users\LENOVO\Videos\Advanced-Promp-Generator-v3</p>
         
-        <pre className="bg-[#1e1e1e] text-[#d4d4d4] p-14 rounded-md mb-4 font-mono text-sm">
+        <pre className="bg-[#1e1e1e] text-[#d4d4d4] p-6 rounded-md mb-4 font-mono text-sm">
           <span className="text-[#888888]">// Frontend example</span>{'\n'}
           <span className="text-[#888888]">// Single command</span>{'\n'}
           <span className="text-[#DCDCAA]">executeCommand</span>
