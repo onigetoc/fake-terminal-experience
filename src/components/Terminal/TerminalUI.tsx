@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, createElement } from 'react';
 import { Button } from "@/components/ui/button";
 import {
   BadgeX, FolderOpen, Plus, Minus, Maximize2, Minimize2, X, Terminal as TerminalIcon,
@@ -36,9 +36,42 @@ interface TerminalUIProps {
 }
 
 // On reçoit en props tout ce qui est nécessaire pour l’UI (états, handlers, etc.)
+// Fonction pour nettoyer uniquement l'historique et les surlignages
+function cleanupHistory({
+  searchRef,
+  setHistory,
+  setIsMinimized
+}: {
+  searchRef: React.RefObject<any>;
+  setHistory: React.Dispatch<React.SetStateAction<any[]>>;
+  setIsMinimized: (val: boolean) => void;
+}) {
+  // 1. Vider d'abord l'historique pour éviter toute manipulation pendant la transition
+  setHistory([]);
+
+  // 2. Déconnecter la recherche en sécurité
+  if (searchRef.current?.removeAllHighlights) {
+    searchRef.current.removeAllHighlights();
+  }
+
+  // 3. Simuler un minimize/maximize avec une pause pour permettre la reconstruction du DOM
+  setIsMinimized(true);
+  setTimeout(() => {
+    setIsMinimized(false);
+  }, 50); // Une petite pause pour s'assurer que le DOM a le temps de se reconstruire
+}
+
 export function TerminalUI(props: TerminalUIProps) {
   const [isTerminalFocused, setIsTerminalFocused] = React.useState(false);
-  const searchRef = useRef(null);  // Ajout de la ref pour TerminalSearch
+  const searchRef = useRef(null);
+
+  const handleClearHistory = React.useCallback(() => {
+    cleanupHistory({
+      searchRef,
+      setHistory: props.setHistory,
+      setIsMinimized: props.setIsMinimized
+    });
+  }, [props.setHistory, props.setIsMinimized]);
 
   // Add click outside handler
   React.useEffect(() => {
@@ -129,11 +162,12 @@ export function TerminalUI(props: TerminalUIProps) {
       }}
     >
       {/* Déplacer TerminalSearch en dehors de la condition isOpen */}
-      <TerminalSearch 
+      <TerminalSearch
         ref={searchRef}
-        isTerminalFocused={isTerminalFocused} 
+        isTerminalFocused={isTerminalFocused}
         observerRef={props.observerRef}
         contentRef={props.contentRef}
+        setIsMinimized={props.setIsMinimized}
       />
       <div
         className="terminal-window"
@@ -321,38 +355,6 @@ export function TerminalUI(props: TerminalUIProps) {
                 </div>
                 <div className="flex space-x-2 flex-shrink-0"> 
                   <TooltipProvider delayDuration={50}>
-
-                    {/* Nouveau bouton de nettoyage avec nouvelle approche */}
-                    {/* <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 hover:bg-white/10 hover:text-white"
-                          onClick={() => {  
-                            // 1. Nettoyer le contenu visuel
-                            if (props.contentRef.current) {
-                              props.contentRef.current.innerHTML = '';
-                            }
-                            
-                            // 2. Réinitialiser la recherche si elle existe
-                            if (searchRef.current) {
-                              searchRef.current.removeAllHighlights();
-                            }
-                            
-                            // 3. Vider la commande en cours
-                            props.setCommand('');
-                          }}
-                        >
-                          <Eraser className="h-4 w-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent className={tooltipStyle}>
-                        <p>Clear terminal</p>
-                      </TooltipContent>
-                    </Tooltip> */}
-
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button
@@ -360,7 +362,13 @@ export function TerminalUI(props: TerminalUIProps) {
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 hover:bg-white/10 hover:text-white"
-                          onClick={() => props.executeCommand('clear')}
+                          onClick={() => {
+                            cleanupHistory({
+                              searchRef,
+                              setHistory: props.setHistory,
+                              setIsMinimized: props.setIsMinimized
+                            });
+                          }}
                         >
                           <Eraser className="h-4 w-4" />
                         </Button>
@@ -417,16 +425,11 @@ export function TerminalUI(props: TerminalUIProps) {
                           size="icon"
                           className="h-8 w-8 hover:bg-white/10 hover:text-white"
                           onClick={() => {
-                            // 1. D'abord, nettoyer les marques de recherche
-                            if (searchRef.current) {
-                              searchRef.current.removeAllHighlights();
-                            }
-
-                            // 2. Attendre le prochain tick pour que le DOM soit nettoyé
-                            setTimeout(() => {
-                              // 3. Ensuite seulement, effacer l'historique
-                              props.setHistory([]);
-                            }, 0);
+                            cleanupHistory({
+                              searchRef,
+                              setHistory: props.setHistory,
+                              setIsMinimized: props.setIsMinimized
+                            });
                           }}
                         >
                           <History className="h-4 w-4" />

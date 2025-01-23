@@ -317,22 +317,19 @@ export const Terminal = forwardRef<any, TerminalProps>(({ config: propsConfig },
     for (const command of commands) {
       if (!command.trim()) continue;
       if (command === 'clear' || command === 'cls') {
-        // Use querySelector to get the terminal content element
         const terminalContent = document.querySelector('.terminal-scrollbar');
         
-        // Clear terminal content by removing all child nodes
+        // Clear terminal content by removing all child nodes while preserving structure
         if (terminalContent) {
           while (terminalContent.firstChild) {
             terminalContent.removeChild(terminalContent.firstChild);
           }
         }
-        
-        // setHistory([]);
-        // props.setHistory([]);
 
         setCommand('');
+        setHistory([]); // Vider l'historique
         
-        // Reset search highlights if they exist
+        // Reset search highlights but maintain search bar state
         if (searchRef.current) {
           searchRef.current.removeAllHighlights();
         }

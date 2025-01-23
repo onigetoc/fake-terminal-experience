@@ -5,6 +5,7 @@ interface SearchProps {
     isTerminalFocused: boolean;
     observerRef: React.RefObject<MutationObserver | null>;
     contentRef: React.RefObject<HTMLElement | null>;
+    setIsMinimized?: (val: boolean) => void;
 }
 
 // Fonctions utilitaires pour la recherche
@@ -98,7 +99,7 @@ function highlightText(node: Node, searchText: string, currentIndex: number, mat
 }
 
 const TerminalSearchComponent = (
-    { isTerminalFocused, observerRef, contentRef }: SearchProps,
+    { isTerminalFocused, observerRef, contentRef, setIsMinimized }: SearchProps,
     ref: React.Ref<unknown>
 ) => {
     const [isOpen, setIsOpen] = useState(false);
@@ -254,45 +255,33 @@ const TerminalSearchComponent = (
         }
     };
 
-    // Nouvelle fonction pour nettoyer complètement le terminal
-    const cleanTerminal = () => {
-        if (!contentRef?.current) return;
-        
-        // 1. D'abord, déconnecter l'observer pour éviter les effets de bord
+    // Gestionnaire unifié pour le nettoyage du terminal
+    const cleanTerminal = useCallback(() => {
+        if (!setIsMinimized) return;
+
+        // 1. Déconnecter l'observer et nettoyer la recherche
         observerRef.current?.disconnect();
-        
-        // 2. Sauvegarder les éléments importants (comme l'input)
-        const inputArea = contentRef.current.querySelector('.terminal-input-area');
-        
-        // 3. Créer un nouveau div propre
-        const cleanDiv = document.createElement('div');
-        cleanDiv.className = contentRef.current.className;
-        
-        // 4. Réinitialiser tous les états de recherche
         setSearchText('');
         setCurrentMatchIndex(0);
         setTotalMatches(0);
-        
-        // 5. Remplacer le contenu par le div propre
-        if (contentRef.current.parentNode) {
-            contentRef.current.parentNode.replaceChild(cleanDiv, contentRef.current);
-            contentRef.current = cleanDiv;
-        }
-        
-        // 6. Remettre l'input si nécessaire
-        if (inputArea) {
-            cleanDiv.appendChild(inputArea);
-        }
-        
-        // 7. Reconnecter l'observer
-        if (observerRef.current) {
-            observerRef.current.observe(cleanDiv, {
-                childList: true,
-                subtree: true,
-                characterData: true
-            });
-        }
-    };
+
+        // 2. Simuler un minimize/maximize avec une pause
+        setIsMinimized(true);
+        setTimeout(() => {
+            // 3. Réinitialiser et reconnecter l'observer après la reconstruction
+            setIsMinimized(false);
+            if (observerRef.current && contentRef.current) {
+                const cleanHTML = removeHighlightMarks(contentRef.current.innerHTML);
+                contentRef.current.innerHTML = cleanHTML;
+                
+                observerRef.current.observe(contentRef.current, {
+                    childList: true,
+                    subtree: true,
+                    characterData: true
+                });
+            }
+        }, 50);
+    }, [setIsMinimized, contentRef, observerRef, setSearchText, setCurrentMatchIndex, setTotalMatches]);
 
     const removeAllHighlights = useCallback(() => {
         if (!contentRef.current) return;
@@ -342,16 +331,16 @@ const TerminalSearchComponent = (
         }
     }, [searchText]);
 
-    // Ajouter un effet pour réinitialiser la recherche lors de la maximisation
+    // Effet pour gérer la réinitialisation de la recherche après minimize/maximize
     useEffect(() => {
-        // On vérifie si le terminal a du contenu
-        if (contentRef?.current) {
-            // Réinitialiser la recherche avec le texte actuel
-            if (searchText) {
+        if (contentRef?.current && searchText) {
+            // Attendre un tick pour s'assurer que le DOM est reconstruit
+            setTimeout(() => {
+                removeAllHighlights();
                 performSearch(searchText, currentMatchIndex);
-            }
+            }, 0);
         }
-    }, [contentRef?.current]); // Dépendance sur le changement de la ref
+    }, [contentRef?.current, removeAllHighlights]); // Dépendance sur la ref et la fonction de nettoyage
 
     return (
         <div className={`absolute right-4 top-[76px] z-50 bg-[#1e1e1e] shadow-lg transition-opacity duration-200 ${
