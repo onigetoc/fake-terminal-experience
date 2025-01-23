@@ -1,4 +1,4 @@
-import React, { useState, useEffect, forwardRef, useImperativeHandle, useRef, useCallback } from 'react';
+import React, { useState, useEffect, forwardRef, useImperativeHandle, useRef } from 'react';
 import { X, Search, ChevronUp, ChevronDown } from 'lucide-react';
 
 interface SearchProps {
@@ -97,10 +97,10 @@ function highlightText(node: Node, searchText: string, currentIndex: number, mat
     }
 }
 
-const TerminalSearchComponent = (
+function TerminalSearchComponent(
     { isTerminalFocused, observerRef, contentRef }: SearchProps,
     ref: React.Ref<unknown>
-) => {
+) {
     const [isOpen, setIsOpen] = useState(false);
     const [searchText, setSearchText] = useState('');
     const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
@@ -294,37 +294,13 @@ const TerminalSearchComponent = (
         }
     };
 
-    const removeAllHighlights = useCallback(() => {
-        if (!contentRef.current) return;
-        
-        try {
-          // 1. Créer une nouvelle fonction sécurisée pour enlever les marques
-          const safelyRemoveHighlights = () => {
-            const marks = contentRef.current?.querySelectorAll('mark');
-            marks?.forEach(mark => {
-              const parent = mark.parentNode;
-              if (parent && parent.contains(mark)) {
-                const text = document.createTextNode(mark.textContent || '');
-                parent.replaceChild(text, mark);
-              }
-            });
-          };
-      
-          // 2. Exécuter la fonction de manière sécurisée
-          safelyRemoveHighlights();
-          
-          // 3. Réinitialiser les états
-          setSearchText('');
-          setCurrentMatchIndex(0);
-          setTotalMatches(0);
-          
-        } catch (error) {
-          console.error('Error removing highlights:', error);
-        }
-      }, [contentRef]);
-
     useImperativeHandle(ref, () => ({
-        removeAllHighlights,
+        removeAllHighlights() {
+            setSearchText('');
+            setIsOpen(false);
+            setCurrentMatchIndex(0);
+            setTotalMatches(0);
+        },
         cleanTerminal // Exposer la nouvelle fonction
     }));
 
@@ -341,17 +317,6 @@ const TerminalSearchComponent = (
             setTotalMatches(0);
         }
     }, [searchText]);
-
-    // Ajouter un effet pour réinitialiser la recherche lors de la maximisation
-    useEffect(() => {
-        // On vérifie si le terminal a du contenu
-        if (contentRef?.current) {
-            // Réinitialiser la recherche avec le texte actuel
-            if (searchText) {
-                performSearch(searchText, currentMatchIndex);
-            }
-        }
-    }, [contentRef?.current]); // Dépendance sur le changement de la ref
 
     return (
         <div className={`absolute right-4 top-[76px] z-50 bg-[#1e1e1e] shadow-lg transition-opacity duration-200 ${

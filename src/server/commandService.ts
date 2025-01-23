@@ -23,9 +23,15 @@ function getProperEncoding(command: string): string {
   return 'utf8';  // Pour Unix/Linux/MacOS
 }
 
-// Détection de la langue du système
+// Déplacer getSystemLocale ici car c'est uniquement utilisé côté serveur
 function getSystemLocale(): string {
-  return Intl.DateTimeFormat().resolvedOptions().locale || 'en-US';
+  const locale = Intl.DateTimeFormat().resolvedOptions().locale || 'en-US';
+  // Ne logger qu'une seule fois au démarrage du serveur
+  if (!process.env.LOCALE_LOGGED) {
+    console.log('Backend System Locale:', locale);
+    process.env.LOCALE_LOGGED = 'true';
+  }
+  return locale;
 }
 
 // Liste des commandes qui nécessitent un traitement spécial

@@ -18,6 +18,7 @@ app.get('/', (req, res) => {
   res.json({ message: 'Server is running!' });
 });
 
+// Supprimer la route system-locale
 app.post('/execute', async (req, res) => {
   try {
     const { command } = req.body;

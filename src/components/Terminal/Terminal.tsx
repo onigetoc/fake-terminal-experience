@@ -134,6 +134,14 @@ export const Terminal = forwardRef<any, TerminalProps>(({ config: propsConfig },
     ...propsConfig
   };
 
+  // Simple détection de langue une seule fois
+  const userLocale = useRef(navigator.language || 'en-US');
+
+  // Log unique au démarrage pour debug
+  useEffect(() => {
+    console.log('User Locale:', userLocale.current);
+  }, []);
+
   // États initiaux basés sur initialState
   const [isVisible, setIsVisible] = useState(mergedConfig.initialState !== 'hidden');
   const [isOpen, setIsOpen] = useState(mergedConfig.initialState === 'open');
@@ -179,30 +187,28 @@ export const Terminal = forwardRef<any, TerminalProps>(({ config: propsConfig },
 
   // Initialiser le répertoire courant
   useEffect(() => {
-    const initializeDirectory = async () => {
+    async function initDirectory() {
       try {
-        console.log('Initializing directory...'); // Ajoutez ce message pour confirmer l'appel de la fonction
-
-        // Au lieu d'utiliser os.homedir(), on peut :
-        // 1. Soit utiliser une API backend pour obtenir cette information
-        // 2. Soit utiliser une valeur par défaut selon l'OS
-        const userHome = osInfo === 'Windows' ? 'C:\\Users\\' : '/home/';
-        console.log('User home directory:', userHome);
-        
-        const { stdout, newCwd } = await executeRemoteCommand('pwd');
-        if (newCwd) {
-          setCurrentDirectory(newCwd);
-        } else if (stdout) {
-          setCurrentDirectory(stdout);
+        const savedDir = localStorage.getItem('terminalDirectory');
+        if (savedDir) {
+          setCurrentDirectory(savedDir);
+        } else {
+          const defaultPath = osInfo === 'Windows' ? process.env.USERPROFILE || 'C:\\Users' : os.homedir();
+          setCurrentDirectory(defaultPath);
+          localStorage.setItem('terminalDirectory', defaultPath);
         }
       } catch (error) {
-        console.error('Failed to initialize directory:', error);
-        setCurrentDirectory('Directory not available');
+        console.error('Directory initialization error:', error);
       }
-    };
+    }
+    initDirectory();
+  }, [osInfo]);
 
-    initializeDirectory();
-  }, []);
+  useEffect(() => {
+    if (currentDirectory) {
+      localStorage.setItem('terminalDirectory', currentDirectory);
+    }
+  }, [currentDirectory]);
 
   // Handle mouse events for resizing
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -241,12 +247,9 @@ export const Terminal = forwardRef<any, TerminalProps>(({ config: propsConfig },
 
   const simulateCommand = async (cmd: string): Promise<string> => {
     try {
-      // Traduire la commande si nécessaire
       const translatedCmd = shouldTranslateCommand(cmd) ? translateCommand(cmd) : cmd;
+      const { stdout, stderr, newCwd } = await executeRemoteCommand(translatedCmd, userLocale.current);
       
-      const { stdout, stderr, newCwd } = await executeRemoteCommand(translatedCmd);
-      
-      // Mise à jour du répertoire courant si changé
       if (newCwd && newCwd !== currentDirectory) {
         setCurrentDirectory(newCwd);
       }
@@ -320,11 +323,13 @@ export const Terminal = forwardRef<any, TerminalProps>(({ config: propsConfig },
         // Clear terminal content by removing all child nodes
         if (terminalContent) {
           while (terminalContent.firstChild) {
-        terminalContent.removeChild(terminalContent.firstChild);
+            terminalContent.removeChild(terminalContent.firstChild);
           }
         }
         
         // setHistory([]);
+        // props.setHistory([]);
+
         setCommand('');
         
         // Reset search highlights if they exist
@@ -627,6 +632,41 @@ export const Terminal = forwardRef<any, TerminalProps>(({ config: propsConfig },
       observerRef.current?.disconnect();
     };
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!isMinimized && searchRef.current) {
+      // Réinitialiser la recherche lorsque le terminal est maximisé
+      searchRef.current.removeAllHighlights();
+    }
+  }, [isMinimized]);
+
+  // Ajouter cet effet pour réinitialiser les refs après minimisation/maximisation
+  useEffect(() => {
+    if (!isMinimized) {
+      // Attendre que le DOM soit mis à jour après la maximisation
+      setTimeout(() => {
+        // Mettre à jour la ref du contenu
+        contentRef.current = document.querySelector('.terminal-scrollbar');
+        
+        if (contentRef.current) {
+          // Déconnecter l'ancien observer
+          observerRef.current?.disconnect();
+          
+          // Créer un nouvel observer
+          observerRef.current = new MutationObserver(() => {
+            // La logique de recherche sera gérée par TerminalSearch
+          });
+          
+          // Reconnecter l'observer au contenu
+          observerRef.current.observe(contentRef.current, {
+            childList: true,
+            subtree: true,
+            characterData: true
+          });
+        }
+      }, 0);
+    }
+  }, [isMinimized]);
 
   // Modifier cette partie pour ne pas retourner trop tôt
   const renderContent = () => {

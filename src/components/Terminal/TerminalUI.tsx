@@ -2,7 +2,7 @@ import React, { useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import {
   BadgeX, FolderOpen, Plus, Minus, Maximize2, Minimize2, X, Terminal as TerminalIcon,
-  Loader2, Eraser, HelpCircle, Info,
+  Loader2, Eraser, HelpCircle, Info, History,
 } from 'lucide-react';
 import TerminalSearch from './terminalAddons.tsx';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -32,7 +32,7 @@ interface TerminalUIProps {
   onFolderSelect?: () => Promise<void>;  // Ajouter cette prop
   observerRef: React.RefObject<MutationObserver | null>;
   contentRef: React.RefObject<HTMLElement | null>;
-  // setHistory: React.Dispatch<React.SetStateAction<any[]>>;
+  setHistory: React.Dispatch<React.SetStateAction<any[]>>;
 }
 
 // On reçoit en props tout ce qui est nécessaire pour l’UI (états, handlers, etc.)
@@ -87,6 +87,13 @@ export function TerminalUI(props: TerminalUIProps) {
   };
 
   const promptSymbol = getPromptSymbol(props.osInfo);
+
+  React.useEffect(() => {
+    if (!props.isMinimized && searchRef.current) {
+      // Réinitialiser la recherche lorsque le terminal est maximisé
+      searchRef.current.removeAllHighlights();
+    }
+  }, [props.isMinimized]);
 
   if (!props.isOpen) {
     return (
@@ -400,6 +407,40 @@ export function TerminalUI(props: TerminalUIProps) {
                         <p>About</p>
                       </TooltipContent>
                     </Tooltip>
+
+                    {/* Dans la section des boutons du terminal, après le bouton Clear */}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 hover:bg-white/10 hover:text-white"
+                          onClick={() => {
+                            // 1. D'abord, nettoyer les marques de recherche
+                            if (searchRef.current) {
+                              searchRef.current.removeAllHighlights();
+                            }
+
+                            // 2. Attendre le prochain tick pour que le DOM soit nettoyé
+                            setTimeout(() => {
+                              // 3. Ensuite seulement, effacer l'historique
+                              props.setHistory([]);
+                            }, 0);
+                          }}
+                        >
+                          <History className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent 
+                        side="top" 
+                        align="center"
+                        className={`${tooltipStyle} z-50`}
+                      >
+                        <p>Clear History Only</p>
+                      </TooltipContent>
+                    </Tooltip>
+
                   </TooltipProvider>
                 </div>
               </form>
