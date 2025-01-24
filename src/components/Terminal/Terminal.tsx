@@ -14,7 +14,12 @@ import { setTerminalExecutor } from '@/utils/terminalUtils'; // Ajouter cette li
 interface TerminalOutput {
   command: string;
   output: string;
-  isLoading?: boolean;  // Ajout d'un flag de chargement par commande
+  isLoading?: boolean;
+}
+
+interface TerminalState {
+  isClearing: boolean;
+  isMinimizing: boolean;
 }
 
 const formatTextWithLinks = (text: string) => {
@@ -128,7 +133,7 @@ interface TerminalProps {
   config?: Partial<TerminalConfig>;
 }
 
-export const Terminal = forwardRef<any, TerminalProps>(({ config: propsConfig }, ref) => {
+export const Terminal = forwardRef<any, TerminalProps>(({ config: propsConfig }, ref): JSX.Element => {
   const mergedConfig = {
     ...terminalConfig.get(),
     ...propsConfig
@@ -316,25 +321,35 @@ export const Terminal = forwardRef<any, TerminalProps>(({ config: propsConfig },
 
     for (const command of commands) {
       if (!command.trim()) continue;
+      // Handle clear commands
       if (command === 'clear' || command === 'cls') {
-        // Use querySelector to get the terminal content element
-        const terminalContent = document.querySelector('.terminal-scrollbar');
-        
-        // Clear terminal content by removing all child nodes
-        if (terminalContent) {
-          while (terminalContent.firstChild) {
-            terminalContent.removeChild(terminalContent.firstChild);
+        try {
+          // 1. Nettoyer les surlignages de recherche
+          if (searchRef.current) {
+            searchRef.current.removeAllHighlights();
           }
-        }
-        
-        // setHistory([]);
-        // props.setHistory([]);
 
-        setCommand('');
-        
-        // Reset search highlights if they exist
-        if (searchRef.current) {
-          searchRef.current.removeAllHighlights();
+          // 2. Forcer un re-render en minimisant
+          setIsMinimized(true);
+
+          // 3. Attendre que le minimize soit appliqué
+          await new Promise(resolve => setTimeout(resolve, 50));
+
+          // 4. Nettoyer l'historique de manière sûre
+          const clearHistory = async () => {
+            setHistory([]);
+            setCommand('');
+            // 5. Attendre le prochain tick pour s'assurer que le state est mis à jour
+            await new Promise(resolve => setTimeout(resolve, 0));
+            // 6. Restaurer l'affichage
+            setIsMinimized(false);
+          };
+
+          await clearHistory();
+        } catch (error) {
+          console.error('Error during clear:', error);
+          // En cas d'erreur, s'assurer que le terminal n'est pas bloqué en minimize
+          setIsMinimized(false);
         }
         continue;
       }

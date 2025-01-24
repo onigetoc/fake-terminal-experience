@@ -2,7 +2,7 @@ import React, { useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import {
   BadgeX, FolderOpen, Plus, Minus, Maximize2, Minimize2, X, Terminal as TerminalIcon,
-  Loader2, Eraser, HelpCircle, Info, History,
+  Loader2, Eraser, HelpCircle, Info, History
 } from 'lucide-react';
 import TerminalSearch from './terminalAddons.tsx';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -321,38 +321,6 @@ export function TerminalUI(props: TerminalUIProps) {
                 </div>
                 <div className="flex space-x-2 flex-shrink-0"> 
                   <TooltipProvider delayDuration={50}>
-
-                    {/* Nouveau bouton de nettoyage avec nouvelle approche */}
-                    {/* <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 hover:bg-white/10 hover:text-white"
-                          onClick={() => {  
-                            // 1. Nettoyer le contenu visuel
-                            if (props.contentRef.current) {
-                              props.contentRef.current.innerHTML = '';
-                            }
-                            
-                            // 2. Réinitialiser la recherche si elle existe
-                            if (searchRef.current) {
-                              searchRef.current.removeAllHighlights();
-                            }
-                            
-                            // 3. Vider la commande en cours
-                            props.setCommand('');
-                          }}
-                        >
-                          <Eraser className="h-4 w-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent className={tooltipStyle}>
-                        <p>Clear terminal</p>
-                      </TooltipContent>
-                    </Tooltip> */}
-
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button
@@ -365,12 +333,61 @@ export function TerminalUI(props: TerminalUIProps) {
                           <Eraser className="h-4 w-4" />
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent 
-                        side="top" 
+                      <TooltipContent
+                        side="top"
                         align="center"
                         className={`${tooltipStyle} z-50`}
                       >
                         <p>Clear Terminal</p>
+                      </TooltipContent>
+                    </Tooltip>
+
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 hover:bg-white/10 hover:text-white"
+                          onClick={async () => {
+                            try {
+                              // 1. Minimiser pour forcer le nettoyage DOM
+                              props.setIsMinimized(true);
+                              await new Promise(resolve => setTimeout(resolve, 10));
+                              
+                              // 2. Déconnecter l'observateur DOM
+                              if (props.observerRef?.current) {
+                                props.observerRef.current.disconnect();
+                              }
+                              
+                              // 3. Nettoyer l'historique
+                              props.setHistory([]);
+                              
+                              // 4. Restaurer l'affichage
+                              setTimeout(() => {
+                                props.setIsMinimized(false);
+                                
+                                // 5. Réinitialiser l'observateur
+                                if (props.contentRef?.current) {
+                                  props.initializeMutationObserver?.();
+                                }
+                              }, 10);
+                              
+                            } catch (error) {
+                              console.error("Error clearing history:", error);
+                              props.setIsMinimized(false);
+                            }
+                          }}
+                        >
+                          <History className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent
+                        side="top"
+                        align="center"
+                        className={`${tooltipStyle} z-50`}
+                      >
+                        <p>Clear History</p>
                       </TooltipContent>
                     </Tooltip>
 
@@ -408,38 +425,6 @@ export function TerminalUI(props: TerminalUIProps) {
                       </TooltipContent>
                     </Tooltip>
 
-                    {/* Dans la section des boutons du terminal, après le bouton Clear */}
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 hover:bg-white/10 hover:text-white"
-                          onClick={() => {
-                            // 1. D'abord, nettoyer les marques de recherche
-                            if (searchRef.current) {
-                              searchRef.current.removeAllHighlights();
-                            }
-
-                            // 2. Attendre le prochain tick pour que le DOM soit nettoyé
-                            setTimeout(() => {
-                              // 3. Ensuite seulement, effacer l'historique
-                              props.setHistory([]);
-                            }, 0);
-                          }}
-                        >
-                          <History className="h-4 w-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent 
-                        side="top" 
-                        align="center"
-                        className={`${tooltipStyle} z-50`}
-                      >
-                        <p>Clear History Only</p>
-                      </TooltipContent>
-                    </Tooltip>
 
                   </TooltipProvider>
                 </div>
