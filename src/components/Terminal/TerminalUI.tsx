@@ -357,26 +357,23 @@ export function TerminalUI(props: TerminalUIProps): JSX.Element {
                           size="icon"
                           className="h-8 w-8 hover:bg-white/10 hover:text-white"
                           onClick={() => {
-                            // 1. Incrémenter la clé pour forcer un re-render ciblé
+                            // 1. Vider l'historique
+                            props.setHistory([]);
+                            
+                            // 2. Forcer un nouveau rendu complet
                             props.setContentKey(prev => prev + 1);
                             
-                            // 2. Déconnecter l'observateur DOM si nécessaire
-                            if (props.observerRef?.current) {
-                              props.observerRef.current.disconnect();
-                            }
-                            
-                            // 3. Nettoyer l'historique dans le prochain tick
+                            // 3. Simuler le cycle minimize/maximize
+                            props.setIsMinimized(true);
                             setTimeout(() => {
-                              if (searchRef.current?.removeAllHighlights) {
-                                searchRef.current.removeAllHighlights();
-                              }
-                              props.setHistory([]);
+                              props.setIsMinimized(false);
+                              // 4. Réinitialiser l'observer après le nouveau rendu
+                              props.observerRef?.current?.disconnect();
+                              props.initializeMutationObserver?.();
                               
-                              // 4. Réinitialiser l'observateur
-                              if (props.contentRef?.current) {
-                                props.initializeMutationObserver?.();
-                              }
-                            }, 0);
+                              // 5. Nettoyer la recherche
+                              searchRef.current?.removeAllHighlights?.();
+                            }, 50);
                           }}
                         >
                           <History className="h-4 w-4" />
