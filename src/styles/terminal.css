@@ -82,54 +82,29 @@
   overflow: hidden;
 }
 
+/* Terminal content wrapper */
+/* Terminal content wrapper */
+.terminal-content-wrapper {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: calc(100% - 70px);
+  overflow: hidden;
+}
+
 /* Terminal scrollable content area */
 .terminal-scrollbar {
   flex: 1;
   overflow-y: auto;
   padding: 1rem;
-  min-height: 0; /* Important for proper flex behavior */
-}
-
-/* Terminal scrollbar styling */
-.terminal-scrollbar::-webkit-scrollbar {
-  width: 10px;
-}
-
-.terminal-scrollbar::-webkit-scrollbar-track {
-  background: #1e1e1e;
-}
-
-.terminal-scrollbar::-webkit-scrollbar-thumb {
-  background: #424242;
-  border-radius: 5px;
-}
-
-.terminal-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #4f4f4f;
-}
-
-/* Firefox */
-.terminal-scrollbar {
-  scrollbar-width: thin;
-  scrollbar-color: #424242 #1e1e1e;
+  padding-bottom: 0.5rem;
 }
 
 /* Terminal input area */
 .terminal-input-area {
-  flex-shrink: 0; /* Prevent input area from shrinking */
-  width: 100%;
+  padding: 0.5rem 1rem;
   background-color: #1e1e1e;
   border-top: 1px solid #333;
-  padding: 0.5rem;
-  font-size: 14px;
-}
-
-/* Terminal content wrapper */
-.terminal-content-wrapper {
-  display: flex;
-  flex-direction: column;
-  height: calc(100% - 40px); /* Subtract header height */
-  overflow: hidden;
 }
 
 /* Add focus styles for terminal container */

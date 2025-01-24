@@ -33,10 +33,13 @@ interface TerminalUIProps {
   observerRef: React.RefObject<MutationObserver | null>;
   contentRef: React.RefObject<HTMLElement | null>;
   setHistory: React.Dispatch<React.SetStateAction<any[]>>;
+  contentKey: number;
+  setContentKey: React.Dispatch<React.SetStateAction<number>>;
+  initializeMutationObserver?: () => void;
 }
 
 // On reçoit en props tout ce qui est nécessaire pour l’UI (états, handlers, etc.)
-export function TerminalUI(props: TerminalUIProps) {
+export function TerminalUI(props: TerminalUIProps): JSX.Element {
   const [isTerminalFocused, setIsTerminalFocused] = React.useState(false);
   const searchRef = useRef(null);  // Ajout de la ref pour TerminalSearch
 
@@ -269,7 +272,11 @@ export function TerminalUI(props: TerminalUIProps) {
 
         {/* Terminal Content - Only show if not minimized */}
         {!props.isMinimized && (
-          <div className="terminal-content-wrapper">
+          <div
+            className="terminal-content-wrapper"
+            key={props.contentKey}
+            data-resetting={props.contentKey % 2 === 1 ? "true" : "false"}
+          >
             {/* Terminal Output */}
             <div 
               ref={props.terminalRef}
@@ -349,34 +356,27 @@ export function TerminalUI(props: TerminalUIProps) {
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 hover:bg-white/10 hover:text-white"
-                          onClick={async () => {
-                            try {
-                              // 1. Minimiser pour forcer le nettoyage DOM
-                              props.setIsMinimized(true);
-                              await new Promise(resolve => setTimeout(resolve, 10));
-                              
-                              // 2. Déconnecter l'observateur DOM
-                              if (props.observerRef?.current) {
-                                props.observerRef.current.disconnect();
+                          onClick={() => {
+                            // 1. Incrémenter la clé pour forcer un re-render ciblé
+                            props.setContentKey(prev => prev + 1);
+                            
+                            // 2. Déconnecter l'observateur DOM si nécessaire
+                            if (props.observerRef?.current) {
+                              props.observerRef.current.disconnect();
+                            }
+                            
+                            // 3. Nettoyer l'historique dans le prochain tick
+                            setTimeout(() => {
+                              if (searchRef.current?.removeAllHighlights) {
+                                searchRef.current.removeAllHighlights();
                               }
-                              
-                              // 3. Nettoyer l'historique
                               props.setHistory([]);
                               
-                              // 4. Restaurer l'affichage
-                              setTimeout(() => {
-                                props.setIsMinimized(false);
-                                
-                                // 5. Réinitialiser l'observateur
-                                if (props.contentRef?.current) {
-                                  props.initializeMutationObserver?.();
-                                }
-                              }, 10);
-                              
-                            } catch (error) {
-                              console.error("Error clearing history:", error);
-                              props.setIsMinimized(false);
-                            }
+                              // 4. Réinitialiser l'observateur
+                              if (props.contentRef?.current) {
+                                props.initializeMutationObserver?.();
+                              }
+                            }, 0);
                           }}
                         >
                           <History className="h-4 w-4" />

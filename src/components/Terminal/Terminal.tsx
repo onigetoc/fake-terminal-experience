@@ -609,6 +609,7 @@ export const Terminal = forwardRef<any, TerminalProps>(({ config: propsConfig },
     history: [],
     searchState: null
   }));
+  const [contentKey, setContentKey] = useState(0);
 
   // Ajouter un effet pour la persistance du state
   useEffect(() => {
@@ -703,6 +704,8 @@ export const Terminal = forwardRef<any, TerminalProps>(({ config: propsConfig },
 
     return (
       <TerminalUI
+        contentKey={contentKey}
+        setContentKey={setContentKey}
         isOpen={isOpen}
         isFullscreen={isFullscreen}
         isMinimized={isMinimized}
