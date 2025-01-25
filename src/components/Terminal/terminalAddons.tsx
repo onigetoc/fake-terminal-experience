@@ -5,7 +5,6 @@ interface SearchProps {
     isTerminalFocused: boolean;
     observerRef: React.RefObject<MutationObserver | null>;
     contentRef: React.RefObject<HTMLElement | null>;
-    setIsMinimized: (value: boolean) => void;
 }
 
 // Fonctions utilitaires pour la recherche
@@ -99,7 +98,7 @@ function highlightText(node: Node, searchText: string, currentIndex: number, mat
 }
 
 const TerminalSearchComponent = (
-    { isTerminalFocused, observerRef, contentRef, setIsMinimized }: SearchProps,
+    { isTerminalFocused, observerRef, contentRef }: SearchProps,
     ref: React.Ref<unknown>
 ) => {
     const [isOpen, setIsOpen] = useState(false);

@@ -1,8 +1,8 @@
-import React, { useRef } from 'react';
+import React, { useRef, createElement } from 'react';
 import { Button } from "@/components/ui/button";
 import {
   BadgeX, FolderOpen, Plus, Minus, Maximize2, Minimize2, X, Terminal as TerminalIcon,
-  Loader2, Eraser, HelpCircle, Info, History
+  Loader2, Eraser, HelpCircle, Info, History,
 } from 'lucide-react';
 import TerminalSearch from './terminalAddons.tsx';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -33,15 +33,45 @@ interface TerminalUIProps {
   observerRef: React.RefObject<MutationObserver | null>;
   contentRef: React.RefObject<HTMLElement | null>;
   setHistory: React.Dispatch<React.SetStateAction<any[]>>;
-  contentKey: number;
-  setContentKey: React.Dispatch<React.SetStateAction<number>>;
-  initializeMutationObserver?: () => void;
 }
 
 // On reçoit en props tout ce qui est nécessaire pour l’UI (états, handlers, etc.)
-export function TerminalUI(props: TerminalUIProps): JSX.Element {
+// Fonction pour nettoyer uniquement l'historique et les surlignages
+function cleanupHistory({
+  searchRef,
+  setHistory,
+  setIsMinimized
+}: {
+  searchRef: React.RefObject<any>;
+  setHistory: React.Dispatch<React.SetStateAction<any[]>>;
+  setIsMinimized: (val: boolean) => void;
+}) {
+  // 1. Vider d'abord l'historique pour éviter toute manipulation pendant la transition
+  setHistory([]);
+
+  // 2. Déconnecter la recherche en sécurité
+  if (searchRef.current?.removeAllHighlights) {
+    searchRef.current.removeAllHighlights();
+  }
+
+  // 3. Simuler un minimize/maximize avec une pause pour permettre la reconstruction du DOM
+  setIsMinimized(true);
+  setTimeout(() => {
+    setIsMinimized(false);
+  }, 0); // Une petite pause pour s'assurer que le DOM a le temps de se reconstruire
+}
+
+export function TerminalUI(props: TerminalUIProps) {
   const [isTerminalFocused, setIsTerminalFocused] = React.useState(false);
-  const searchRef = useRef(null);  // Ajout de la ref pour TerminalSearch
+  const searchRef = useRef(null);
+
+  const handleClearHistory = React.useCallback(() => {
+    cleanupHistory({
+      searchRef,
+      setHistory: props.setHistory,
+      setIsMinimized: props.setIsMinimized
+    });
+  }, [props.setHistory, props.setIsMinimized]);
 
   // Add click outside handler
   React.useEffect(() => {
@@ -132,11 +162,12 @@ export function TerminalUI(props: TerminalUIProps): JSX.Element {
       }}
     >
       {/* Déplacer TerminalSearch en dehors de la condition isOpen */}
-      <TerminalSearch 
+      <TerminalSearch
         ref={searchRef}
-        isTerminalFocused={isTerminalFocused} 
+        isTerminalFocused={isTerminalFocused}
         observerRef={props.observerRef}
         contentRef={props.contentRef}
+        setIsMinimized={props.setIsMinimized}
       />
       <div
         className="terminal-window"
@@ -272,11 +303,7 @@ export function TerminalUI(props: TerminalUIProps): JSX.Element {
 
         {/* Terminal Content - Only show if not minimized */}
         {!props.isMinimized && (
-          <div
-            className="terminal-content-wrapper"
-            key={props.contentKey}
-            data-resetting={props.contentKey % 2 === 1 ? "true" : "false"}
-          >
+          <div className="terminal-content-wrapper">
             {/* Terminal Output */}
             <div 
               ref={props.terminalRef}
@@ -335,13 +362,19 @@ export function TerminalUI(props: TerminalUIProps): JSX.Element {
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 hover:bg-white/10 hover:text-white"
-                          onClick={() => props.executeCommand('clear')}
+                          onClick={() => {
+                            cleanupHistory({
+                              searchRef,
+                              setHistory: props.setHistory,
+                              setIsMinimized: props.setIsMinimized
+                            });
+                          }}
                         >
                           <Eraser className="h-4 w-4" />
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent
-                        side="top"
+                      <TooltipContent 
+                        side="top" 
                         align="center"
                         className={`${tooltipStyle} z-50`}
                       >
@@ -349,6 +382,7 @@ export function TerminalUI(props: TerminalUIProps): JSX.Element {
                       </TooltipContent>
                     </Tooltip>
 
+                    {/* Dans la section des boutons du terminal, après le bouton Clear */}
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button
@@ -357,30 +391,18 @@ export function TerminalUI(props: TerminalUIProps): JSX.Element {
                           size="icon"
                           className="h-8 w-8 hover:bg-white/10 hover:text-white"
                           onClick={() => {
-                            // 1. Vider l'historique
-                            props.setHistory([]);
-                            
-                            // 2. Forcer un nouveau rendu complet
-                            props.setContentKey(prev => prev + 1);
-                            
-                            // 3. Simuler le cycle minimize/maximize
-                            props.setIsMinimized(true);
-                            setTimeout(() => {
-                              props.setIsMinimized(false);
-                              // 4. Réinitialiser l'observer après le nouveau rendu
-                              props.observerRef?.current?.disconnect();
-                              props.initializeMutationObserver?.();
-                              
-                              // 5. Nettoyer la recherche
-                              searchRef.current?.removeAllHighlights?.();
-                            }, 50);
+                            cleanupHistory({
+                              searchRef,
+                              setHistory: props.setHistory,
+                              setIsMinimized: props.setIsMinimized
+                            });
                           }}
                         >
                           <History className="h-4 w-4" />
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent
-                        side="top"
+                      <TooltipContent 
+                        side="top" 
                         align="center"
                         className={`${tooltipStyle} z-50`}
                       >
@@ -421,7 +443,6 @@ export function TerminalUI(props: TerminalUIProps): JSX.Element {
                         <p>About</p>
                       </TooltipContent>
                     </Tooltip>
-
 
                   </TooltipProvider>
                 </div>
