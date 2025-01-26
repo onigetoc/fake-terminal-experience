@@ -14,12 +14,7 @@ import { setTerminalExecutor } from '@/utils/terminalUtils'; // Ajouter cette li
 interface TerminalOutput {
   command: string;
   output: string;
-  isLoading?: boolean;
-}
-
-interface TerminalState {
-  isClearing: boolean;
-  isMinimizing: boolean;
+  isLoading?: boolean;  // Ajout d'un flag de chargement par commande
 }
 
 const formatTextWithLinks = (text: string) => {
@@ -133,7 +128,7 @@ interface TerminalProps {
   config?: Partial<TerminalConfig>;
 }
 
-export const Terminal = forwardRef<any, TerminalProps>(({ config: propsConfig }, ref): JSX.Element => {
+export const Terminal = forwardRef<any, TerminalProps>(({ config: propsConfig }, ref) => {
   const mergedConfig = {
     ...terminalConfig.get(),
     ...propsConfig
@@ -321,35 +316,22 @@ export const Terminal = forwardRef<any, TerminalProps>(({ config: propsConfig },
 
     for (const command of commands) {
       if (!command.trim()) continue;
-      // Handle clear commands
       if (command === 'clear' || command === 'cls') {
-        try {
-          // 1. Nettoyer les surlignages de recherche
-          if (searchRef.current) {
-            searchRef.current.removeAllHighlights();
+        const terminalContent = document.querySelector('.terminal-scrollbar');
+        
+        // Clear terminal content by removing all child nodes while preserving structure
+        if (terminalContent) {
+          while (terminalContent.firstChild) {
+            terminalContent.removeChild(terminalContent.firstChild);
           }
+        }
 
-          // 2. Forcer un re-render en minimisant
-          setIsMinimized(true);
-
-          // 3. Attendre que le minimize soit appliqué
-          await new Promise(resolve => setTimeout(resolve, 50));
-
-          // 4. Nettoyer l'historique de manière sûre
-          const clearHistory = async () => {
-            setHistory([]);
-            setCommand('');
-            // 5. Attendre le prochain tick pour s'assurer que le state est mis à jour
-            await new Promise(resolve => setTimeout(resolve, 0));
-            // 6. Restaurer l'affichage
-            setIsMinimized(false);
-          };
-
-          await clearHistory();
-        } catch (error) {
-          console.error('Error during clear:', error);
-          // En cas d'erreur, s'assurer que le terminal n'est pas bloqué en minimize
-          setIsMinimized(false);
+        setCommand('');
+        setHistory([]); // Vider l'historique
+        
+        // Reset search highlights but maintain search bar state
+        if (searchRef.current) {
+          searchRef.current.removeAllHighlights();
         }
         continue;
       }
@@ -450,6 +432,7 @@ export const Terminal = forwardRef<any, TerminalProps>(({ config: propsConfig },
     // Regex amélioré pour les chemins Windows et Unix
     // const pathRegex = /(?:[a-zA-Z]:)?\\(?:[^\\/:*?"<>|\r\n@]+\\)*[^\\/:*?"<>|\r\n@]*|(?:\/(?!@)[^\/\r\n@]+)+/g;
     const pathRegex = /[A-Za-z]:\\(?:[^\\/:*?"<>|\r\n]+\\)+[^\\/:*?"<>|\r\n'")]+/g;
+    // const pathRegex = /[A-Za-z]:\\(?:[^\\/:*?"<>|\r\n]+\\)+[^\\/:*?"<>|\r\n'")]+/g;
     // const pathRegex = /[A-Za-z]:(?:\\|\/)+(?:[^\\/:*?"<>|\r\n]+(?:\\|\/)+)+[^\\/:*?"<>|\r\n'")\]]+/g;
     
     // Diviser d'abord par les URLs
@@ -609,7 +592,6 @@ export const Terminal = forwardRef<any, TerminalProps>(({ config: propsConfig },
     history: [],
     searchState: null
   }));
-  const [contentKey, setContentKey] = useState(0);
 
   // Ajouter un effet pour la persistance du state
   useEffect(() => {
@@ -704,8 +686,6 @@ export const Terminal = forwardRef<any, TerminalProps>(({ config: propsConfig },
 
     return (
       <TerminalUI
-        contentKey={contentKey}
-        setContentKey={setContentKey}
         isOpen={isOpen}
         isFullscreen={isFullscreen}
         isMinimized={isMinimized}
