@@ -28,7 +28,7 @@ export const defaultConfig: TerminalConfig = {
   showTerminal: true,
   startMinimized: false,
   defaultHeight: 320,
-  minHeight: 200,
+  minHeight: 300,
   minWidth: 300,
   showExecutedCommands: true,
   keepCommandHistory: true,

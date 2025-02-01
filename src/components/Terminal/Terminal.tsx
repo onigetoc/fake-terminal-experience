@@ -1,13 +1,13 @@
 import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
-import { Button } from "@/components/ui/button";
+import { Button } from "../../components/ui/button";
 import { X, Minus, Maximize2, Terminal as TerminalIcon, Trash2, Plus, Loader2, HelpCircle, Eraser, Info, FolderOpen, Minimize2 } from 'lucide-react';
-import { useToast } from "@/components/ui/use-toast";
-import '../../styles/terminal.css';
-import { executeRemoteCommand } from '../../services/terminalApi';
-import { translateCommand, shouldTranslateCommand } from '../../utils/osCommands';
-import { terminalConfig, TerminalConfig } from '@/config/terminalConfig'; // Importer le type TerminalConfig
+import { useToast } from "../../components/ui/use-toast";
+import './styles/terminal.css';
+import { executeRemoteCommand } from './services/terminalApi';
+import { translateCommand, shouldTranslateCommand } from './utils/osCommands';
+import { terminalConfig, TerminalConfig } from './config/terminalConfig';
 import { TerminalUI } from './TerminalUI';
-import { setTerminalExecutor } from '@/utils/terminalUtils'; // Ajouter cette ligne
+import { setTerminalExecutor } from './utils/terminalUtils';
 
 // Assurez-vous qu'il n'y a aucune utilisation de TerminalContext
 
@@ -198,7 +198,7 @@ export const Terminal = forwardRef<any, TerminalProps>(({ config: propsConfig },
         if (savedDir) {
           setCurrentDirectory(savedDir);
         } else {
-          const defaultPath = osInfo === 'Windows' ? process.env.USERPROFILE || 'C:\\Users' : os.homedir();
+          const defaultPath = osInfo === 'Windows' ? process.env.USERPROFILE || 'C:\\Users' : '/home';
           setCurrentDirectory(defaultPath);
           localStorage.setItem('terminalDirectory', defaultPath);
         }
@@ -253,7 +253,7 @@ export const Terminal = forwardRef<any, TerminalProps>(({ config: propsConfig },
   const simulateCommand = async (cmd: string): Promise<string> => {
     try {
       const translatedCmd = shouldTranslateCommand(cmd) ? translateCommand(cmd) : cmd;
-      const { stdout, stderr, newCwd } = await executeRemoteCommand(translatedCmd, userLocale.current);
+      const { stdout, stderr, newCwd } = await executeRemoteCommand(translatedCmd);
       
       if (newCwd && newCwd !== currentDirectory) {
         setCurrentDirectory(newCwd);

@@ -5,10 +5,10 @@
   "type":"module",
   "author":"Onigetoc",
   "scripts":{
-     "kill-port":"npx kill-port 5173 3001",
-     "dev":"concurrently -k \"vite --port 5173\" \"tsx watch src/server/index.ts\"",
+     "kill-port":"npx kill-port 5175 3002",
+     "dev":"concurrently -k \"vite --port 5173\" \"tsx watch src/components/Terminal/server/index.ts\"",
      "frontend":"vite --port 5173",
-     "server":"tsx watch src/server/index.ts",
+     "server":"tsx watch src/components/Terminal/server/index.ts",
      "build":"tsc && vite build",
      "preview":"vite preview"
   },

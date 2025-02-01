@@ -18,10 +18,68 @@
   pointer-events: auto;
 }
 
+.search-container {
+  border: 1px solid #333;
+  border-radius: 6px;
+  background-color: #1e1e1e;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  transition: opacity 0.2s ease-in-out;
+}
+
 .search-container input {
   flex: 1;
   border: 1px solid #404040;
+  background-color: #1e1e1e;
+}
+
+.search-container input:focus {
+  outline: none;
+  border-color: #007fd4;
+  background-color: #252526;
+}
+
+/* Masquer les marques dans les commandes */
+.terminal-command-wrapper mark {
+  display: none !important;
+}
+
+/* Style des résultats de recherche */
+.terminal-output-line mark.terminal-search-highlight {
+  background-color: rgba(255, 255, 0, 0.2);
+  color: inherit;
+}
+
+.terminal-output-line mark.terminal-search-current {
+  background-color: #f59e0b;
+  color: black;
   color: #d1d5db;
+}
+
+/* Terminal command styles */
+.terminal-line {
+  position: relative;
+}
+
+.terminal-prompt-line {
+  display: flex;
+  align-items: center;
+}
+
+.terminal-command-wrapper {
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.terminal-command {
+  display: inline-flex;
+  align-items: center;
+  color: #d4d4d4;
+  white-space: pre;
+}
+
+.terminal-output-line {
+  position: relative;
   padding: 4px 8px;
   border-radius: 2px;
   outline: none;
