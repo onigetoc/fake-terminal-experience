@@ -15,7 +15,7 @@ const isWindows = process.platform === 'win32';
 function getProperEncoding(command: string): string {
   if (isWindows) {
     // Windows utilise différents encodages selon les commandes
-    if (command.startsWith('dir') || command.includes('tree')) {
+    if (command.includes('tree')) {
       return 'cp850';  // Pour les commandes système Windows
     }
     return 'cp866';  // Pour les autres commandes Windows
@@ -214,7 +214,7 @@ export async function executeCommand(command: string): Promise<CommandResult> {
     }
 
     // Ajouter un bloc spécial pour la commande "start"
-    if (isWindows && cmd.toLowerCase().startsWith('start ')) {
+    if (isWindows && cmd.toLowerCase().startsWith('start ') ) {
       const toOpen = cmd.slice(5).trim();
       const specialSetup = [
         'powershell.exe',
